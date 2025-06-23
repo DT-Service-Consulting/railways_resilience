@@ -16,3 +16,5 @@ packages = [
 
 [tool.poetry.dependencies]
 matplotlib = "^3.10.3"
+notebook = "^7.4.3"
+pandas = "^2.3.0"
