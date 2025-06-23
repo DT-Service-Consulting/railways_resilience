@@ -1,0 +1,11 @@
+name: railways
+dependencies:
+  - python==3.8
+  - pip
+  - pip:
+    - -e ./osmread-master
+    - -e ./gtfspy-master
+    - bokeh
+    - jupyter
+    - thefuzz
+    - geopy
