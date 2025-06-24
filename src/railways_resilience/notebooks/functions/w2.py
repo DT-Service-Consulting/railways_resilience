@@ -6,10 +6,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]  # points to gtfs_to_networks fol
 if str(BASE_DIR) not in sys.path:
     sys.path.append(str(BASE_DIR))
 
-from utils import *
-
-path_to_sqlite = f"{BASE_DIR}/sqlite/belgium.sqlite"
-g = load_gtfs(path_to_sqlite)
+from utils import load_gtfs, load_graph, plot_graph, mode_from_string, get_routes_for_mode, get_color_per_route
 
 import pandas as pd
 import numpy as np
@@ -178,9 +175,10 @@ def get_all_GTC_refactored_(L_space, P_space, k, wait_pen, transfer_pen):
 
     return shortest_paths
 
-def P_space_(L, mode, start_hour=5, end_hour=24, dir_indicator=None):
+def P_space_(g, L, mode, start_hour=5, end_hour=24, dir_indicator=None):
     '''
-    Create P-space graph given
+    Create P-space graph given:
+    g: gtfs feed
     L: L-space
     Optional:
         start_hour: start hour considered when building L-space. Defaults to 5 am
@@ -303,8 +301,8 @@ def P_space_(L, mode, start_hour=5, end_hour=24, dir_indicator=None):
 
     return P_G
 
-def eg_(L):
-    P = P_space_(L,
+def eg_(g, L):
+    P = P_space_(g, L,
                 start_hour=5,
                 end_hour=24,
                 mode="Rail")
@@ -322,7 +320,7 @@ def eg_(L):
     return eg / (L.number_of_nodes() * (L.number_of_nodes() - 1))
     
 
-def random_node_removal(G, num_to_remove, seed=None, verbose=False):
+def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
     """
     Removes nodes from the graph in a random order and tracks the impact on global efficiency.
 
@@ -346,7 +344,7 @@ def random_node_removal(G, num_to_remove, seed=None, verbose=False):
     if verbose:
         print(f"Random removal order: {removal_nodes}")
 
-    original_efficiency = eg_(G)
+    original_efficiency = eg_(g, G)
     efficiencies = []
     num_removed = []
     removed_nodes = []
@@ -359,7 +357,7 @@ def random_node_removal(G, num_to_remove, seed=None, verbose=False):
         removed_nodes.append(node)
 
         try:
-            eff = eg_(G)
+            eff = eg_(g, G)
         except Exception as e:
             if verbose:
                 print(f"Error after {i + 1} removals: {e}")
@@ -379,7 +377,7 @@ def random_node_removal(G, num_to_remove, seed=None, verbose=False):
     return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
 
 
-def targeted_node_removal(G, num_to_remove, verbose=False):
+def targeted_node_removal(g, G, num_to_remove, verbose=False):
     """
     Removes nodes from the graph using a greedy strategy that selects the node whose removal
     results in the largest drop in global efficiency at each step.
@@ -397,7 +395,7 @@ def targeted_node_removal(G, num_to_remove, verbose=False):
         removal_times (list of float): Time taken (in seconds) for each full removal step,
                                        including node evaluation and removal.
     """
-    original_efficiency = eg_(G)
+    original_efficiency = eg_(g, G)
     efficiencies = []
     num_removed = []
     removed_nodes = []
@@ -415,7 +413,7 @@ def targeted_node_removal(G, num_to_remove, verbose=False):
             temp_G.remove_node(node)
 
             try:
-                eff = eg_(temp_G)
+                eff = eg_(g, temp_G)
             except:
                 continue
 
@@ -433,7 +431,7 @@ def targeted_node_removal(G, num_to_remove, verbose=False):
         removed_nodes.append(best_node)
 
         try:
-            eff = eg_(G)
+            eff = eg_(g, G)
         except Exception as e:
             if verbose:
                 print(f"Error after {step + 1} removals: {e}")
@@ -453,7 +451,7 @@ def targeted_node_removal(G, num_to_remove, verbose=False):
     return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
 
 
-def betweenness_node_removal(G, num_to_remove, verbose=False):
+def betweenness_node_removal(g, G, num_to_remove, verbose=False):
     """
     Removes nodes from the graph in descending order of weighted betweenness centrality
     and tracks the impact on global efficiency.
@@ -470,7 +468,7 @@ def betweenness_node_removal(G, num_to_remove, verbose=False):
         removed_nodes (list of node): List of nodes removed in the order of removal.
         removal_times (list of float): Time taken (in seconds) for each removal step.
     """
-    original_efficiency = eg_(G)
+    original_efficiency = eg_(g, G)
     efficiencies = []
     num_removed = []
     removed_nodes = []
@@ -499,7 +497,7 @@ def betweenness_node_removal(G, num_to_remove, verbose=False):
         removed_nodes.append(node_to_remove)
 
         try:
-            eff = eg_(G)
+            eff = eg_(g, G)
         except Exception as e:
             if verbose:
                 print(f"Error after removing {node_to_remove}: {e}")
@@ -521,6 +519,7 @@ def betweenness_node_removal(G, num_to_remove, verbose=False):
 
 
 def simulate_fixed_node_removal_efficiency(
+    g,
     L_graph,
     num_to_remove=None,
     pct_to_remove=None,  # priority over num_to_remove
@@ -549,11 +548,11 @@ def simulate_fixed_node_removal_efficiency(
         raise ValueError("You must specify either num_to_remove or percentage.")
 
     if method == "random":
-        return random_node_removal(G, num_to_remove, seed, verbose)
+        return random_node_removal(g, G, num_to_remove, seed, verbose)
     elif method == "targeted":
-        return targeted_node_removal(G, num_to_remove, verbose)
+        return targeted_node_removal(g, G, num_to_remove, verbose)
     elif method == "betweenness":
-        return betweenness_node_removal(G, num_to_remove, verbose)
+        return betweenness_node_removal(g, G, num_to_remove, verbose)
     else:
         raise ValueError("Invalid method. Choose 'random' or 'targeted'.")
 
@@ -576,7 +575,7 @@ def plot_efficiency_results(num_removed, efficiencies, title="Impact of Node Rem
     plt.tight_layout()
     plt.show()
 
-def run_removal_simulations(subgraphs_by_size, num_to_remove=None, pct_to_remove=None, method='random', seed=42, verbose=False):
+def run_removal_simulations(g, subgraphs_by_size, num_to_remove=None, pct_to_remove=None, method='random', seed=42, verbose=False):
     """
     Run node removal simulations across all subgraphs grouped by size and collect efficiency and timing metrics.
 
@@ -607,6 +606,7 @@ def run_removal_simulations(subgraphs_by_size, num_to_remove=None, pct_to_remove
             start = time.perf_counter()
             try:
                 original_efficiency, efficiencies, num_removed, removed_nodes, removal_times = simulate_fixed_node_removal_efficiency(
+                    g,
                     L_graph=L,
                     num_to_remove=num_to_remove,
                     pct_to_remove=pct_to_remove, # priority over num_to_remove
