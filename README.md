@@ -50,6 +50,7 @@ Open Anaconda Prompt (Windows) or a terminal (Linux) and navigate to the project
   ```bash
   cd /path/to/repo
   conda create -n py38 python=3.8
+  conda activate py38
   ```
 
 Create the environment using:
