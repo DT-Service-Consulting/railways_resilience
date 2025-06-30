@@ -242,7 +242,7 @@ def P_space_(g, L, mode, start_hour=5, end_hour=24, dir_indicator=None):
                     sub_edges.append((a, b, edge_data))
 
             if not sub_edges:
-                continue
+                continue # goes back to line 236 (next interation of the loop)
 
             sub.add_edges_from(sub_edges)
 
