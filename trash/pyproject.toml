@@ -8,13 +8,9 @@ authors = [
     {name = "Marco Di Gennaro", email = "marco.digennaro@dtsc.be"}
 ]
 readme = "README.md"
-requires-python = "<=3.8"
+requires-python = "<3.8"
 [tool.poetry]
 packages = [
     {include = "railways_resilience", from = "src"}
     ]
 
-[tool.poetry.dependencies]
-matplotlib = "^3.10.3"
-notebook = "^7.4.3"
-pandas = "^2.3.0"
