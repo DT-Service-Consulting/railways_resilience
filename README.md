@@ -53,10 +53,27 @@ Open Anaconda Prompt (Windows) or a terminal (Linux) and navigate to the project
   conda activate py38
   ```
 
-Create the environment using:
+### 4. Install Required Packages
+
 ```bash
-conda env create -f environment.yml
+pip install -e /path/to/repo/omsread
+pip install -e /path/to/repo/gtfspy
+pip install -e /path/to/repo/gtfs_railways
 ```
+
+### 5. Test import
+
+```bash
+import gtfs_railways
+from gtfspy import import_gtfs
+```
+
+
+#Create the environment using:
+#```bash
+#conda env create -f environment.yml
+#```
+
 
 ### 4. Run the Jupyter Notebook
 Activate the environment and start Jupyter:
