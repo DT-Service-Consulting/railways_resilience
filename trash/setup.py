@@ -6,7 +6,7 @@ setup(
     author="Marco Di Gennaro",
     author_email="marco.digennaro@dtsc.be",
     description="Public Transport Network Graph Modelling using GTFS Data",
-    long_description=open("README.md").read(),
+    long_description=open("../README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/DT-Service-Consulting/railways_resilience",  # Replace with your repository URL
     packages=find_packages(exclude=["notebooks", "tests"]),

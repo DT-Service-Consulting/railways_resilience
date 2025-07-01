@@ -41,12 +41,7 @@ Open Anaconda Prompt (Windows) or a terminal (Linux) and navigate to the project
   D:
   cd Documents\GTFS_TO_NETWORK
   ```
-- **Linux:**
-  ```bash
-  cd /path/to/repo
-  ```
-
-- **MacOS:**
+- **Linux & MacOS:**
   ```bash
   cd /path/to/repo
   conda create -n py38 python=3.8
@@ -56,16 +51,18 @@ Open Anaconda Prompt (Windows) or a terminal (Linux) and navigate to the project
 ### 4. Install Required Packages
 
 ```bash
-pip install -e /path/to/repo/omsread
-pip install -e /path/to/repo/gtfspy
-pip install -e /path/to/repo/gtfs_railways
+# follow this order
+
+pip install -e /path/to/gtfs_railways/external_packages/osmread
+pip install -e /path/to/gtfs_railways/external_packages/gtfspy
+pip install -e /path/to/gtfs_railways
 ```
 
-### 5. Test import
+### 5. Test imports and config file 
 
 ```bash
-import gtfs_railways
-from gtfspy import import_gtfs
+python /path/to/gtfs_railways/gtfs_railways/examples/test_import.py
+python /path/to/gtfs_railways/gtfs_railways/examples/test_config.py
 ```
 
 
