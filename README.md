@@ -38,8 +38,9 @@ Open Anaconda Prompt (Windows) or a terminal (Linux) and navigate to the project
 
 - **Windows:**
   ```bash
-  D:
-  cd Documents\GTFS_TO_NETWORK
+  cd \path\to\repo
+  py -3.8 -m venv py38
+  .\py38\Scripts\activate
   ```
 - **Linux & MacOS:**
   ```bash
@@ -52,7 +53,6 @@ Open Anaconda Prompt (Windows) or a terminal (Linux) and navigate to the project
 
 ```bash
 # follow this order
-
 pip install -e /path/to/gtfs_railways/external_packages/osmread
 pip install -e /path/to/gtfs_railways/external_packages/gtfspy
 pip install -e /path/to/gtfs_railways
@@ -66,23 +66,17 @@ python /path/to/gtfs_railways/gtfs_railways/examples/test_config.py
 ```
 
 
-#Create the environment using:
-#```bash
-#conda env create -f environment.yml
-#```
-
-
 ### 4. Run the Jupyter Notebook
 Activate the environment and start Jupyter:
 ```bash
 conda activate pt-networks
 jupyter notebook
 ```
-In your browser, select a notebook from the list (e.g., Belgium Railways.ipynb) to begin your analysis.
+Select a notebook from the list (e.g., Belgium Railways.ipynb) to begin your analysis.
 
 ## 📁 Project Structure
 ```python
-GTFS_TO_NETWORK/
+RAILWAY_RESILIENCE/
 │
 ├── data/
 │   ├── belgium/ # Unzipped GTFS files (consists of various txt files)
