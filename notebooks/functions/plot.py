@@ -120,23 +120,27 @@ def plot_efficiency_decay(df, graphs_per_group=2, color_map=None, title="Efficie
     Plots efficiency decay lines for selected subgraphs grouped by num_nodes.
 
     Parameters:
-        df (pd.DataFrame): DataFrame containing 'num_nodes' and efficiency columns ('eff_after_0', etc.)
-        graphs_per_group (int): Number of subgraphs to plot per num_nodes category
-        color_map (dict): Optional custom color mapping for num_nodes
-        title (str): Title for the plot
+        df (pd.DataFrame): DataFrame with 'num_nodes' and 'eff_after_' columns
+        graphs_per_group (int): Number of graphs per num_nodes category
+        color_map (str or dict): Name of a Matplotlib colormap or a dict of num_nodes to color
+        title (str): Plot title
     """
-    # Automatically generate color map if not provided
-    if color_map is None:
-        unique_nodes = sorted(df["num_nodes"].unique())
+    unique_nodes = sorted(df["num_nodes"].unique())
+
+    # Handle colormap input
+    if isinstance(color_map, str):
+        colormap = cm.get_cmap(color_map, len(unique_nodes))
+        color_map = {num_nodes: colormap(i) for i, num_nodes in enumerate(unique_nodes)}
+    elif color_map is None:
         colormap = cm.get_cmap('tab10', len(unique_nodes))
         color_map = {num_nodes: colormap(i) for i, num_nodes in enumerate(unique_nodes)}
+    elif not isinstance(color_map, dict):
+        raise ValueError("color_map must be a string, dictionary, or None")
 
     # Subset the DataFrame
     df_subset = df.groupby("num_nodes", group_keys=False).head(graphs_per_group)
 
-    # Identify efficiency columns
     eff_cols = [col for col in df_subset.columns if col.startswith("eff_after_")]
-
     plt.figure(figsize=(10, 5))
     plotted_labels = set()
 
@@ -146,7 +150,6 @@ def plot_efficiency_decay(df, graphs_per_group=2, color_map=None, title="Efficie
         eff_values = [row[col] for col in eff_cols if not pd.isna(row[col])]
         x = list(range(len(eff_values)))
 
-        # Only label the first occurrence per group
         label = f"{num_nodes}" if num_nodes not in plotted_labels else None
         plt.plot(x, eff_values, color=color, label=label)
         plotted_labels.add(num_nodes)
