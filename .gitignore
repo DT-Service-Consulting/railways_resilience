@@ -1,4 +1,10 @@
 # Byte-compiled / optimized / DLL files
+
+trash
+data/sqlite/belgium.sqlite
+data/sqlite/*.sqlite
+.DS_Store
+
 __pycache__/
 *.py[cod]
 *$py.class
