@@ -161,3 +161,21 @@ def plot_efficiency_decay(df, graphs_per_group=2, color_map=None, title="Efficie
     plt.legend(title="Number of Nodes")
     plt.tight_layout()
     plt.show()
+
+def remove_node_edges_and_plot(G, node):
+    """
+    Removes all edges connected to the specified node from the graph and plots the result.
+
+    Parameters:
+        G (networkx.Graph): The graph to modify (passed by reference).
+        node: The node whose edges will be removed.
+        back_map (str): Parameter passed to plot_graph function for background map.
+    """
+    if G.is_directed():
+        edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
+    else:
+        edges_to_remove = list(G.edges(node))
+
+    G.remove_edges_from(edges_to_remove)
+
+    return G
