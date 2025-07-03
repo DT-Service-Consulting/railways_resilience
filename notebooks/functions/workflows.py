@@ -2,6 +2,19 @@ import os
 import pickle
 import random
 from collections import deque
+from functools import wraps
+import time
+
+def compute_time(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        print(f"Function '{func.__name__}' completed.")
+        print(f"Execution time: {end_time - start_time:.2f} seconds\n")
+        return result
+    return wrapper
 
 def extract_directed_subgraph(G, target_size, min_edges=3, seed=None):
     if seed is not None:
