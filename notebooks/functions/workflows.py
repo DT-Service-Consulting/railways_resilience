@@ -57,7 +57,7 @@ def generate_subgraph_batches(G, sizes=(5, 10, 15), num_per_size=10, seed=42, mi
     
     return all_subgraphs
 
-def save_subgraphs_by_size(subgraphs_by_size, base_dir="../pkl"):
+def save_subgraphs_by_size(subgraphs_by_size, base_dir="../data/pkl"):
     """
     Saves subgraphs grouped by size into separate folders under the specified base directory.
 
@@ -80,7 +80,7 @@ def save_subgraphs_by_size(subgraphs_by_size, base_dir="../pkl"):
     print(f"Saved all subgraphs by size into '{base_dir}'.")
 
 
-def load_all_subgraphs(base_dir="../pkl", max_per_type=2):
+def load_all_subgraphs(base_dir="../data/pkl", max_per_type=2):
     """
     Loads pickled subgraphs organized in subfolders named by number of nodes.
 
