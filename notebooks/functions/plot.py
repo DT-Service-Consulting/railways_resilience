@@ -3,6 +3,80 @@ import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
 
+from bokeh.plotting import figure, show, from_networkx
+from bokeh.models import Circle, MultiLine, HoverTool, LinearColorMapper, ColorBar, WheelZoomTool
+from bokeh.tile_providers import get_provider, Vendors
+from bokeh.io.export import export_png
+from pyproj import Transformer
+from bokeh.models import GMapOptions
+from bokeh.plotting import gmap
+import networkx as nx
+
+def plot_graph(G, space="L", back_map=False, MAPS_API_KEY=None, color_by="", edge_color_by="", export_name=""):
+    if back_map == "GMAPS":
+        first_node = next(iter(G.nodes(data=True)))
+        map_options = GMapOptions(lat=first_node[1]["lat"], lng=first_node[1]["lon"], map_type="roadmap", zoom=11)
+        p = gmap(MAPS_API_KEY, map_options)
+    else:
+        p = figure(height=600, width=950, toolbar_location='below', tools="pan, wheel_zoom, box_zoom, reset, save")
+
+    # Build node position dict
+    pos_dict = {}
+    transformer = Transformer.from_crs("epsg:4326", "epsg:3857", always_xy=True)
+    for i, d in G.nodes(data=True):
+        if back_map == "OSM":
+            x2, y2 = transformer.transform(float(d["lon"]), float(d["lat"]))
+        else:
+            x2, y2 = float(d["lon"]), float(d["lat"])
+        pos_dict[i] = (x2, y2)
+
+    graph = from_networkx(G, layout_function=pos_dict)
+
+    # Hover tools
+    node_hover_tool = HoverTool(tooltips=[("index", "@index"), ("name", "@name")], renderers=[graph.node_renderer])
+    edge_tooltips = [("duration_avg", "@duration_avg")] if space == "L" else [("avg_wait", "@avg_wait")]
+    hover_edges = HoverTool(tooltips=edge_tooltips, renderers=[graph.edge_renderer], line_policy="interp")
+    p.add_tools(node_hover_tool, hover_edges)
+
+    # Node coloring
+    if color_by and all(color_by in d for _, d in G.nodes(data=True)):
+        mapper = LinearColorMapper(palette="RdYlGn11", low=min(nx.get_node_attributes(G, color_by).values()), high=max(nx.get_node_attributes(G, color_by).values()))
+        graph.node_renderer.glyph = Circle(size=7, fill_color={'field': color_by, 'transform': mapper})
+    else:
+        graph.node_renderer.glyph = Circle(size=7)
+
+    # Edge coloring
+    if edge_color_by and all(edge_color_by in d for _, _, d in G.edges(data=True)):
+        edge_vals = [d[edge_color_by] for _, _, d in G.edges(data=True)]
+        mapper = LinearColorMapper(palette="RdYlGn11", low=min(edge_vals), high=max(edge_vals))
+        graph.edge_renderer.glyph = MultiLine(line_width=4, line_alpha=0.5, line_color={'field': edge_color_by, 'transform': mapper})
+        color_bar = ColorBar(color_mapper=mapper, label_standoff=12, border_line_color=None, location=(0, 0))
+        p.add_layout(color_bar, "right")
+    else:
+        graph.edge_renderer.glyph = MultiLine(line_width=4, line_alpha=0.5)
+
+    graph.node_renderer.selection_glyph = Circle(fill_color='blue')
+    graph.node_renderer.hover_glyph = Circle(fill_color='red')
+
+    p.toolbar.active_scroll = p.select_one(WheelZoomTool)
+
+    if space == "P":
+        graph.edge_renderer.selection_glyph = MultiLine(line_color='black', line_width=5)
+        graph.edge_renderer.hover_glyph = MultiLine(line_color='black', line_width=10)
+    else:
+        graph.edge_renderer.selection_glyph = MultiLine(line_color='blue', line_width=5)
+        graph.edge_renderer.hover_glyph = MultiLine(line_color='red', line_width=5)
+
+    p.renderers.append(graph)
+
+    if back_map == "OSM":
+        p.add_tile(get_provider(Vendors.CARTODBPOSITRON))
+
+    if export_name:
+        export_png(p, filename=export_name + ".png")
+    else:
+        show(p)
+
 def plot_efficiency_results(num_removed, efficiencies, title="Impact of Node Removal on Network Efficiency (Normalized)"):
     """
     Plots the change in normalized efficiency as nodes are removed.
