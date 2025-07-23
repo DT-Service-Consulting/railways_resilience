@@ -2,6 +2,19 @@ import os
 import pickle
 import random
 from collections import deque
+from functools import wraps
+import time
+
+def compute_time(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        print(f"Function '{func.__name__}' completed.")
+        print(f"Execution time: {end_time - start_time:.2f} seconds\n")
+        return result
+    return wrapper
 
 def extract_directed_subgraph(G, target_size, min_edges=3, seed=None):
     if seed is not None:
@@ -57,7 +70,7 @@ def generate_subgraph_batches(G, sizes=(5, 10, 15), num_per_size=10, seed=42, mi
     
     return all_subgraphs
 
-def save_subgraphs_by_size(subgraphs_by_size, base_dir="../pkl"):
+def save_subgraphs_by_size(subgraphs_by_size, base_dir="../data/pkl"):
     """
     Saves subgraphs grouped by size into separate folders under the specified base directory.
 
@@ -80,7 +93,7 @@ def save_subgraphs_by_size(subgraphs_by_size, base_dir="../pkl"):
     print(f"Saved all subgraphs by size into '{base_dir}'.")
 
 
-def load_all_subgraphs(base_dir="../pkl", max_per_type=2):
+def load_all_subgraphs(base_dir="../data/pkl", max_per_type=2):
     """
     Loads pickled subgraphs organized in subfolders named by number of nodes.
 
