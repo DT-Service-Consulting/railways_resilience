@@ -1,5 +1,7 @@
-# Byte-compiled / optimized / DLL files
+# Marco's files
+setup.sh
 
+# Byte-compiled / optimized / DLL files
 trash
 data/sqlite/belgium.sqlite
 data/sqlite/*.sqlite
