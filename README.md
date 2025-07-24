@@ -1,8 +1,14 @@
 # Public Transport Network Graph Modelling using GTFS Data
 
-This repository provides tools for processing GTFS (General Transit Feed Specification) data to model public transport networks as graphs. It includes notebooks for parsing, cleaning, and analyzing GTFS data, with support for multiple cities. Our code focuses on the Belgian data, particularly rail lines. There is also some work on the Chicago data (provided by Dr. Renzo Massobrio (renzo.massobrio@uantwerpen.be)), which we took as a reference to while working on the Belgian data.
+This repository provides tools for processing [GTFS](https://github.com/DT-Service-Consulting/gtfs_railways/tree/main) (General Transit Feed Specification) data to model public transport networks as graphs. 
+
+It includes notebooks for parsing, cleaning, and analyzing GTFS data, with support for multiple cities. 
+Our code focuses on the Belgian and Dutch railways data. 
+
+An example for the Chicago data is also provided.
+
 The structure should look like this:
-```
+```bash
 project/
 ├── INSTALL.md
 ├── README.md
@@ -10,20 +16,31 @@ project/
 ├── imports.py
 ├── notebooks/
 └── ...
-
 ---
 ```
 
+## Cleaning data
 
-### Run the Jupyter Notebook
-Activate the environment and start Jupyter:
-```bash
-jupyter notebook
+The cleaning process involves several steps to ensure the GTFS data is suitable for graph modeling. 
+The main steps are described below:
+- notebook 1
+- notebook 2
+- ...
+
+## Optimization
+
+Five different versions of the functions are provided to optimize the cleaning process.
+
+```python
+get_all_GTC
 ```
-Select a notebook from the list (e.g., Belgium Railways.ipynb) to begin your analysis.
+
+```python
+P_space
+```
 
 ## 📁 Project Structure
-```python
+```bash
 ├── notebooks/
 │   ├── Belgium Railways.ipynb # Main notebook for working on the Belgian Data
 │   ├── CheckNodes&Routes.ipynb # Notebook to check, visualize and analyze the L-Graph
