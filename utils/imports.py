@@ -7,9 +7,7 @@ import bokeh.io
 bokeh.io.output_notebook(INLINE)
 
 # Now you can import from config.py
-from config import BASE_DIR, DATA_DIR
-path_to_sqlite = str( DATA_DIR / "sqlite/belgium.sqlite" ) # Path where the sqlite database is stored
-L_space_path= DATA_DIR / "pkl/belgium_routesCleaned.pkl"  # Path where the clean L-space graph was stored (cleaned routes)
+from config import BASE_DIR, DATA_DIR, PATH_TO_SQLITE, L_SPACE_PATH
 
 from gtfs_railways.functions.core import load_gtfs
 from gtfs_railways.functions.core import load_graph
@@ -23,10 +21,6 @@ from gtfs_railways.functions.core import random_node_removal
 from gtfs_railways.functions.core import targeted_node_removal
 from gtfs_railways.functions.core import betweenness_node_removal
 from gtfs_railways.functions.core import run_removal_simulations
-
-attributes = load_gtfs(path_to_sqlite)
-L_graph = load_graph(L_space_path)
-subgraphs = load_all_subgraphs(DATA_DIR / "pkl")
 
 from gtfs_railways.functions.v0 import (
     get_all_GTC as get_all_GTC_v0,
