@@ -29,6 +29,7 @@ from notebooks.functions.plot import plot_efficiency_results_from_batch
 from notebooks.functions.plot import compute_avg_runtime_by_num_nodes
 from notebooks.functions.plot import plot_removal_time_vs_steps
 from notebooks.functions.plot import plot_efficiency_decay
+from notebooks.functions.plot import remove_node_edges_and_plot
 
 from gtfs_railways.functions.v0 import (
     get_all_GTC as get_all_GTC_v0,
