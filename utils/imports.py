@@ -21,6 +21,14 @@ from gtfs_railways.functions.core import random_node_removal
 from gtfs_railways.functions.core import targeted_node_removal
 from gtfs_railways.functions.core import betweenness_node_removal
 from gtfs_railways.functions.core import run_removal_simulations
+from gtfs_railways.functions.core import compute_time
+
+from notebooks.functions.plot import plot_efficiency_results
+from notebooks.functions.plot import plot_graph
+from notebooks.functions.plot import plot_efficiency_results_from_batch
+from notebooks.functions.plot import compute_avg_runtime_by_num_nodes
+from notebooks.functions.plot import plot_removal_time_vs_steps
+from notebooks.functions.plot import plot_efficiency_decay
 
 from gtfs_railways.functions.v0 import (
     get_all_GTC as get_all_GTC_v0,
