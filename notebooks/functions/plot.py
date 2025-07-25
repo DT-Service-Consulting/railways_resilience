@@ -1,16 +1,16 @@
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import numpy as np
-import pandas as pd
+import matplotlib.pyplot as plt # type: ignore
+import matplotlib.cm as cm # type: ignore
+import numpy as np 
+import pandas as pd # type: ignore
 
-from bokeh.plotting import figure, show, from_networkx
-from bokeh.models import Circle, MultiLine, HoverTool, LinearColorMapper, ColorBar, WheelZoomTool
-from bokeh.tile_providers import get_provider, Vendors
-from bokeh.io.export import export_png
-from pyproj import Transformer
-from bokeh.models import GMapOptions
-from bokeh.plotting import gmap
-import networkx as nx
+from bokeh.plotting import figure, show, from_networkx # type: ignore
+from bokeh.models import Circle, MultiLine, HoverTool, LinearColorMapper, ColorBar, WheelZoomTool # type: ignore
+from bokeh.tile_providers import get_provider, Vendors # type: ignore
+from bokeh.io.export import export_png # type: ignore
+from pyproj import Transformer # type: ignore
+from bokeh.models import GMapOptions # type: ignore
+from bokeh.plotting import gmap # type: ignore
+import networkx as nx # type: ignore
 
 def plot_graph(G, space="L", back_map=False, MAPS_API_KEY=None, color_by="", edge_color_by="", export_name=""):
     if back_map == "GMAPS":
@@ -164,7 +164,7 @@ def plot_removal_time_vs_steps(row):
         "Node Removed": row["removed_nodes"],
         "Time Elapsed (s)": individual_times
     })
-    display(df)
+    display(df) # type: ignore
 
     # Plotting
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
@@ -250,3 +250,168 @@ def remove_node_edges_and_plot(G, node):
     G.remove_edges_from(edges_to_remove)
 
     return G
+
+
+def plot_runtime_comparison(runtimes, subgraph_sizes, versions, colors, bar_width=0.2):
+    for size in subgraph_sizes:
+        try:
+            num_subgraphs = len(next(iter(runtimes.values()))[size])  # Dynamically determine count
+        except (KeyError, StopIteration):
+            print(f"No data available for subgraph size {size}")
+            continue
+
+        x = np.arange(num_subgraphs)
+        total_versions = len(versions)
+        offsets = np.linspace(
+            -bar_width * (total_versions - 1) / 2,
+            bar_width * (total_versions - 1) / 2,
+            total_versions
+        )
+
+        plt.figure(figsize=(8, 5))
+
+        for i, version in enumerate(versions):
+            if size not in runtimes.get(version, {}):
+                print(f"Skipping version {version} for subgraph size {size} (data missing)")
+                continue
+
+            y = runtimes[version][size]
+            plt.bar(x + offsets[i], y, width=bar_width, color=colors.get(version, "gray"), label=version)
+
+        plt.title(f"Runtime Comparison for Subgraph Size {size} at 50% Node Removal")
+        plt.xlabel("Subgraph Index")
+        plt.ylabel("Runtime (seconds)")
+        plt.xticks(x, [f"{i+1}" for i in x])
+        plt.legend()
+        plt.grid(True, axis='y', linestyle='--', linewidth=0.5)
+        plt.tight_layout()
+        plt.show()
+
+def num_route_dir_pairs_with_density(L):
+    """
+    Compute the number of unique route-direction pairs in subgraph L
+    and the density defined as pairs / number of nodes.
+
+    Args:
+        L: networkx graph with edges having 'route_I_counts' and optionally 'direction_id' attribute
+
+    Returns:
+        tuple: (num_pairs, density)
+               num_pairs (int): Number of unique (route, direction) pairs found on edges.
+               density (float): num_pairs divided by number of nodes in L.
+    """
+    route_dir_pairs = set()
+
+    for _, _, edge_data in L.edges(data=True):
+        route_counts = edge_data.get('route_I_counts', {})
+        dir_dict = edge_data.get('direction_id', {})
+
+        for route in route_counts.keys():
+            if dir_dict:
+                for direction in dir_dict.keys():
+                    route_dir_pairs.add((route, direction))
+            else:
+                route_dir_pairs.add((route, None))
+
+    num_pairs = len(route_dir_pairs)
+    num_nodes = L.number_of_nodes()
+    density = num_pairs / num_nodes if num_nodes > 0 else 0
+
+    return num_pairs, density
+
+def sort_subgraphs_dict_by_route_dir_pairs(subgraphs_dict):
+    sorted_subgraphs_dict = {}
+    for size, sg_list in subgraphs_dict.items():
+        # Sort subgraphs in descending order by density (route-dir pairs / number of nodes)
+        sorted_sgs = sorted(
+            sg_list,
+            key=lambda g: num_route_dir_pairs_with_density(g)[1],  # density is at index 1
+            reverse=True
+        )
+        sorted_subgraphs_dict[size] = sorted_sgs
+    return sorted_subgraphs_dict
+
+def plot_runtime_bars(runtimes, subgraph_sizes, versions, colors, bar_width=0.2):
+    for size in subgraph_sizes:
+        try:
+            num_subgraphs = len(next(iter(runtimes.values()))[size])
+        except (KeyError, StopIteration):
+            print(f"Subgraph size {size} not available in runtimes.")
+            continue
+
+        x = np.arange(num_subgraphs)
+        total_versions = len(versions)
+        offsets = np.linspace(
+            -bar_width * (total_versions - 1) / 2,
+            bar_width * (total_versions - 1) / 2,
+            total_versions
+        )
+
+        plt.figure(figsize=(8, 5))
+
+        for i, version in enumerate(versions):
+            if size not in runtimes.get(version, {}):
+                print(f"Version {version} does not contain subgraph size {size}. Skipping.")
+                continue
+
+            y = runtimes[version][size]
+            if len(y) != num_subgraphs:
+                print(f"Length mismatch for version {version} at size {size}. Skipping.")
+                continue
+
+            plt.bar(x + offsets[i], y, width=bar_width, color=colors.get(version, "gray"), label=version)
+
+        plt.title(f"Runtime Comparison for Subgraph Size {size} at 40% Node Removal")
+        plt.xlabel("Subgraph Index")
+        plt.ylabel("Runtime (seconds)")
+        plt.legend()
+        plt.grid(True, axis='y', linestyle='--', linewidth=0.5)
+        plt.tight_layout()
+        plt.show()
+
+def plot_runtime_vs_density_scatter(runtimes, sorted_subgraphs, versions, subgraph_sizes, colors, density_func):
+    """
+    Plots runtime vs density scatter plots for specified versions and subgraph sizes.
+
+    Parameters:
+        runtimes (dict): Nested dict of runtimes[version][subgraph_size] = list of runtimes.
+        sorted_subgraphs (dict): Dict of subgraph_size -> list of graphs.
+        versions (list): List of version keys to include in the plot.
+        subgraph_sizes (list): List of subgraph sizes to plot.
+        colors (dict): Mapping from version to color.
+        density_func (callable): Function to compute density metric. Must return (score, ...) where score is numeric.
+    """
+    for size in subgraph_sizes:
+        plt.figure(figsize=(8, 5))
+        
+        for version in versions:
+            graphs = sorted_subgraphs.get(size, [])
+            densities = []
+            runtimes_list = []
+            
+            for i, graph in enumerate(graphs, start=1):
+                score, _ = density_func(graph)  # Assumes it returns a tuple (score, extra)
+                num_nodes = graph.number_of_nodes()
+                density = score / num_nodes if num_nodes > 0 else 0
+
+                try:
+                    runtime = runtimes[version][size][i - 1]
+                except (KeyError, IndexError):
+                    runtime = None
+                
+                if runtime is not None:
+                    densities.append(density)
+                    runtimes_list.append(runtime)
+            
+            if densities and runtimes_list:
+                plt.scatter(densities, runtimes_list, color=colors.get(version, "gray"), label=version, alpha=0.7)
+            else:
+                print(f"No data points to plot for {version} size {size}")
+        
+        plt.title(f"Runtime vs Density for Subgraph Size {size}")
+        plt.xlabel("Density (Route-Direction pairs / Number of Nodes)")
+        plt.ylabel("Runtime (seconds)")
+        plt.legend()
+        plt.grid(True, linestyle='--', linewidth=0.5)
+        plt.tight_layout()
+        plt.show()
