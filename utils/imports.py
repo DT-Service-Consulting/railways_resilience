@@ -25,6 +25,7 @@ from gtfs_railways.functions.core import compute_time
 from gtfs_railways.functions.core import get_runtime
 from gtfs_railways.functions.core import generate_subgraph_batches
 from gtfs_railways.functions.core import compute_graph_features
+from gtfs_railways.functions.core import get_efficiency_curves
 
 from notebooks.functions.plot import plot_efficiency_results
 from notebooks.functions.plot import plot_graph
@@ -38,6 +39,7 @@ from notebooks.functions.plot import num_route_dir_pairs_with_density
 from notebooks.functions.plot import sort_subgraphs_dict_by_route_dir_pairs
 from notebooks.functions.plot import plot_runtime_bars
 from notebooks.functions.plot import plot_runtime_vs_density_scatter
+from notebooks.functions.plot import plot_efficiency_results
 
 from gtfs_railways.functions.v0 import (
     get_all_GTC as get_all_GTC_v0,

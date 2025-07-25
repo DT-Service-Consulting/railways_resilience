@@ -415,3 +415,41 @@ def plot_runtime_vs_density_scatter(runtimes, sorted_subgraphs, versions, subgra
         plt.grid(True, linestyle='--', linewidth=0.5)
         plt.tight_layout()
         plt.show()
+
+def plot_efficiency_results(efficiency_data, seeds, size, versions=None):
+    """
+    Plots efficiency curves for specified versions and subgraph size.
+
+    Parameters:
+    - efficiency_data: dict from get_efficiency_curves output:
+        { version_label: { size: [ { 'curve': [...], 'seed': int, ... }, ... ] } }
+    - seeds: List of seed values used
+    - size: Integer size of the subgraph to plot
+    - versions: Optional list of version labels to plot (e.g. ['v0', 'v4']); if None, plots all
+    """
+    if versions is None:
+        versions = sorted(efficiency_data.keys())
+
+    plt.figure(figsize=(6 * len(versions), 5))
+
+    for i, label in enumerate(versions, start=1):
+        plt.subplot(1, len(versions), i)
+
+        runs = efficiency_data.get(label, {}).get(size, [])
+        if not runs:
+            plt.title(f'{label} - Size {size} (no data)')
+            continue
+
+        for idx, run in enumerate(runs):
+            curve = run['curve']
+            seed = run.get('seed', 'unknown')
+            plt.plot(curve, label=f'Seed {seed}, Run {idx + 1}')
+
+        plt.title(f'{label} - Size {size}')
+        plt.xlabel('Nodes removed')
+        plt.ylabel('Efficiency')
+        plt.legend(fontsize='small', loc='best')
+        plt.grid(True)
+
+    plt.tight_layout(rect=[0, 0, 0.9, 0.75])
+    plt.show()
