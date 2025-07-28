@@ -416,7 +416,7 @@ def plot_runtime_vs_density_scatter(runtimes, sorted_subgraphs, versions, subgra
         plt.tight_layout()
         plt.show()
 
-def plot_efficiency_results(efficiency_data, seeds, size, versions=None):
+def plot_efficiency_results_multi(efficiency_data, seeds, size, versions=None):
     """
     Plots efficiency curves for specified versions and subgraph size.
 
