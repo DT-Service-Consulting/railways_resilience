@@ -7,7 +7,7 @@ import bokeh.io
 bokeh.io.output_notebook(INLINE)
 
 # Now you can import from config.py
-from config import BASE_DIR, DATA_DIR, PATH_TO_SQLITE, L_SPACE_PATH
+from config import BASE_DIR, DATA_DIR, PATH_TO_SQLITE, L_SPACE_PATH, P_SPACE_PATH
 
 from gtfs_railways.functions.core import load_gtfs
 from gtfs_railways.functions.core import load_graph
@@ -26,6 +26,7 @@ from gtfs_railways.functions.core import get_runtime
 from gtfs_railways.functions.core import generate_subgraph_batches
 from gtfs_railways.functions.core import compute_graph_features
 from gtfs_railways.functions.core import get_efficiency_curves
+from gtfs_railways.functions.core import get_random_removal_nodes
 
 from notebooks.functions.plot import plot_efficiency_results
 from notebooks.functions.plot import plot_graph
@@ -39,7 +40,7 @@ from notebooks.functions.plot import num_route_dir_pairs_with_density
 from notebooks.functions.plot import sort_subgraphs_dict_by_route_dir_pairs
 from notebooks.functions.plot import plot_runtime_bars
 from notebooks.functions.plot import plot_runtime_vs_density_scatter
-from notebooks.functions.plot import plot_efficiency_results
+from notebooks.functions.plot import plot_efficiency_results_multi
 
 from gtfs_railways.functions.v0 import (
     get_all_GTC as get_all_GTC_v0,
