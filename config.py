@@ -8,3 +8,4 @@ DATA_DIR = BASE_DIR / 'data'
 
 PATH_TO_SQLITE = BASE_DIR / "sqlite/belgium.sqlite" # Path where the sqlite database is stored
 L_SPACE_PATH = DATA_DIR / "pkl/belgium_routesCleaned.pkl"  # Path where the clean L-space graph was stored (cleaned)
+P_SPACE_PATH = DATA_DIR / "pkl/belgium_P.pkl" # Path where the clean P-space graph was stored (cleaned)
