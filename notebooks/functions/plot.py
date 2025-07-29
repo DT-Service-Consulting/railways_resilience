@@ -77,7 +77,7 @@ def plot_graph(G, space="L", back_map=False, MAPS_API_KEY=None, color_by="", edg
     else:
         show(p)
 
-def plot_efficiency_results(num_removed, efficiencies, title="Impact of Node Removal on Network Efficiency (Normalized)"):
+def plot_efficiency_results(percent_remaining, efficiencies, title="Impact of Node Removal on Network Efficiency (Normalized)"):
     """
     Plots the change in normalized efficiency as nodes are removed.
 
@@ -87,11 +87,12 @@ def plot_efficiency_results(num_removed, efficiencies, title="Impact of Node Rem
     - title: Plot title
     """
     plt.figure(figsize=(6, 4))
-    plt.plot(num_removed, efficiencies, marker='o')
-    plt.xlabel("Number of Nodes Removed")
+    plt.plot(percent_remaining, efficiencies, marker='o')
+    plt.xlabel("Percentage of Nodes Remaining")
     plt.ylabel("Normalized Efficiency")
     plt.title(title)
     plt.grid(True)
+    plt.gca().invert_xaxis()
     plt.tight_layout()
     plt.show()
 
