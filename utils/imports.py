@@ -31,6 +31,12 @@ from gtfs_railways.functions.core import average_waiting_time_per_line_per_direc
 from gtfs_railways.functions.core import average_speed_network
 from gtfs_railways.functions.core import get_events
 from gtfs_railways.functions.core import save_graph
+from gtfs_railways.functions.core import save_gtc_to_pkl
+from gtfs_railways.functions.core import load_gtc_from_pkl
+from gtfs_railways.functions.core import betweenness_fit_revised
+from gtfs_railways.functions.core import meshedness
+from gtfs_railways.functions.core import plot_graph_highlight_node
+from gtfs_railways.functions.core import plot_top_hubs
 
 from notebooks.functions.plot import plot_efficiency_results
 from notebooks.functions.plot import plot_graph
