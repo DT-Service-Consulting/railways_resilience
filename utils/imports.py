@@ -27,6 +27,10 @@ from gtfs_railways.functions.core import generate_subgraph_batches
 from gtfs_railways.functions.core import compute_graph_features
 from gtfs_railways.functions.core import get_efficiency_curves
 from gtfs_railways.functions.core import get_random_removal_nodes
+from gtfs_railways.functions.core import average_waiting_time_per_line_per_direction
+from gtfs_railways.functions.core import average_speed_network
+from gtfs_railways.functions.core import get_events
+from gtfs_railways.functions.core import save_graph
 
 from notebooks.functions.plot import plot_efficiency_results
 from notebooks.functions.plot import plot_graph
