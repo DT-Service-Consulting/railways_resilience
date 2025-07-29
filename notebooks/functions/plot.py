@@ -101,19 +101,17 @@ def plot_efficiency_results_from_batch(row):
     Plot the efficiency drop across node removals for a single subgraph.
 
     Parameters:
-    row (pd.Series): A row from the DataFrame containing the following keys:
-        - 'original_efficiency': efficiency before any node removal
-        - 'efficiency_after_each_removal': list of efficiency values after each node is removed
-        - 'num_nodes': number of nodes in the subgraph
-        - 'graph_index': index of the subgraph within its group
-
-    The function combines the original efficiency with the efficiency after each removal,
-    and plots them as a line chart with points for visual tracking of efficiency drop.
+        row (pd.Series): A row from the DataFrame containing keys:
+            - 'num_nodes': total nodes in subgraph
+            - 'efficiency_after_each_removal': list of normalized efficiency after each node removal
     """
-    # Full efficiency list: original + after each removal
-    all_efficiencies = row['efficiency_after_each_removal']
-    num_removed = list(range(1, len(all_efficiencies) + 1))
-    plot_efficiency_results(num_removed, all_efficiencies)
+    total_nodes = row['num_nodes']
+    efficiencies = [1.0] + row['efficiency_after_each_removal']  # efficiency before any removal + after each removal
+    
+    num_removed = list(range(len(efficiencies)))  # 0, 1, 2, ... nodes removed
+    percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
+
+    plot_efficiency_results(percent_remaining, efficiencies)
 
 
 def compute_avg_runtime_by_num_nodes(df_results):
@@ -134,7 +132,7 @@ def compute_avg_runtime_by_num_nodes(df_results):
             - 'total_runtime_seconds': total runtime for that graph size
     """
     # Add a column for number of removed nodes per row
-    df_results["num_nodes_removed"] = df_results["removed_nodes"].apply(len)
+    df_results["pct_nodes_removed"] = df_results["removed_entities"].apply(len)
 
     # Group and aggregate
     grouped = df_results.groupby("num_nodes").agg(
@@ -162,7 +160,7 @@ def plot_removal_time_vs_steps(row):
     
     # Display tabular data
     df = pd.DataFrame({
-        "Node Removed": row["removed_nodes"],
+        "Node Removed": row["removed_entities"],
         "Time Elapsed (s)": individual_times
     })
     display(df) # type: ignore
