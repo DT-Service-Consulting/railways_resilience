@@ -456,3 +456,38 @@ def plot_efficiency_results_multi(efficiency_data, size, versions=None):
     plt.tight_layout(rect=[0, 0, 0.9, 0.75])
     plt.show()
 
+def analyze_runtime_improvement(runtimes, from_version='v1', to_version='v5'):
+    """
+    Computes and plots the Pareto curve of runtime improvements from one version to another.
+    
+    Parameters:
+    - runtimes (dict): Nested dict of runtimes[version][subgraph_size] = list of runtimes
+    - from_version (str): Version to compare from
+    - to_version (str): Version to compare to
+    """
+    improvements = []
+    for size in runtimes.get(from_version, {}):
+        v_from = runtimes[from_version].get(size, [])
+        v_to = runtimes.get(to_version, {}).get(size, [])
+        for r1, r2 in zip(v_from, v_to):
+            if r1 != 0:
+                improvements.append((r1 - r2) / r1)
+
+    if not improvements:
+        print("No valid improvement data found.")
+        return
+
+    average_improvement = sum(improvements) / len(improvements)
+    print(f"Average improvement from {from_version} to {to_version}: {average_improvement:.2%}")
+
+    sorted_improvements = sorted(improvements, reverse=True)
+    cum_percent = [i / len(sorted_improvements) * 100 for i in range(len(sorted_improvements))]
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(cum_percent, sorted_improvements, marker='o')
+    plt.xlabel("Cumulative Percentage of Subgraphs")
+    plt.ylabel(f"Relative Runtime Improvement ({from_version} to {to_version})")
+    plt.title(f"Pareto Curve of Runtime Improvement from {from_version} to {to_version}")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
