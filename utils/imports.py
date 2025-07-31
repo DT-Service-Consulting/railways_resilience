@@ -58,6 +58,7 @@ from notebooks.functions.plot import sort_subgraphs_dict_by_route_dir_pairs
 from notebooks.functions.plot import plot_runtime_bars
 from notebooks.functions.plot import plot_runtime_vs_density_scatter
 from notebooks.functions.plot import plot_efficiency_results_multi
+from notebooks.functions.plot import analyze_runtime_improvement 
 
 from gtfs_railways.functions.v0 import (
     get_all_GTC as get_all_GTC_v0,
