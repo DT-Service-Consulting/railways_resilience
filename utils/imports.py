@@ -37,6 +37,13 @@ from gtfs_railways.functions.core import betweenness_fit_revised
 from gtfs_railways.functions.core import meshedness
 from gtfs_railways.functions.core import plot_graph_highlight_node
 from gtfs_railways.functions.core import plot_top_hubs
+from gtfs_railways.functions.core import mode_to_string
+from gtfs_railways.functions.core import generate_graph
+from gtfs_railways.functions.core import merge_stops_with_same_name
+from gtfs_railways.functions.core import check_islands
+from gtfs_railways.functions.core import merge_recommender
+from gtfs_railways.functions.core import manual_merge
+from gtfs_railways.functions.core import sanity_check
 
 from notebooks.functions.plot import plot_efficiency_results
 from notebooks.functions.plot import plot_graph
