@@ -251,23 +251,24 @@ def remove_node_edges_and_plot(G, node):
     return G
 
 
-def plot_runtime_comparison(runtimes, subgraph_sizes, versions, colors, bar_width=0.2):
+def plot_runtime_comparison(runtimes, subgraph_sizes, versions, colors, bar_width=0.2, group_gap=0.3):
     for size in subgraph_sizes:
         try:
-            num_subgraphs = len(next(iter(runtimes.values()))[size])  # Dynamically determine count
+            num_subgraphs = len(next(iter(runtimes.values()))[size])
         except (KeyError, StopIteration):
             print(f"No data available for subgraph size {size}")
             continue
 
-        x = np.arange(num_subgraphs)
         total_versions = len(versions)
+        group_width = total_versions * bar_width + group_gap
+        x = np.arange(num_subgraphs) * group_width  # insert space between subgraph groups
         offsets = np.linspace(
             -bar_width * (total_versions - 1) / 2,
             bar_width * (total_versions - 1) / 2,
             total_versions
         )
 
-        plt.figure(figsize=(8, 5))
+        plt.figure(figsize=(10, 5))
 
         for i, version in enumerate(versions):
             if size not in runtimes.get(version, {}):
@@ -275,16 +276,18 @@ def plot_runtime_comparison(runtimes, subgraph_sizes, versions, colors, bar_widt
                 continue
 
             y = runtimes[version][size]
-            plt.bar(x + offsets[i], y, width=bar_width, color=colors.get(version, "gray"), label=version)
+            positions = x + offsets[i]
+            plt.bar(positions, y, width=bar_width, color=colors.get(version, "gray"), label=version)
 
         plt.title(f"Runtime Comparison for Subgraph Size {size} at 50% Node Removal")
         plt.xlabel("Subgraph Index")
         plt.ylabel("Runtime (seconds)")
-        plt.xticks(x, [f"{i+1}" for i in x])
+        plt.xticks(x, [f"{i+1}" for i in range(num_subgraphs)])
         plt.legend()
         plt.grid(True, axis='y', linestyle='--', linewidth=0.5)
         plt.tight_layout()
         plt.show()
+
 
 def num_route_dir_pairs_with_density(L):
     """
@@ -452,3 +455,4 @@ def plot_efficiency_results_multi(efficiency_data, size, versions=None):
 
     plt.tight_layout(rect=[0, 0, 0.9, 0.75])
     plt.show()
+
