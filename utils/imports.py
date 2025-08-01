@@ -44,6 +44,8 @@ from gtfs_railways.functions.core import check_islands
 from gtfs_railways.functions.core import merge_recommender
 from gtfs_railways.functions.core import manual_merge
 from gtfs_railways.functions.core import sanity_check
+from gtfs_railways.functions.core import process_route_data
+from gtfs_railways.functions.core import node_degrees_table
 
 from notebooks.functions.plot import plot_efficiency_results
 from notebooks.functions.plot import plot_graph
