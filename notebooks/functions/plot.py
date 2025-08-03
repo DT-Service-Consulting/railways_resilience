@@ -491,3 +491,25 @@ def analyze_runtime_improvement(runtimes, from_version='v1', to_version='v5'):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+
+def plot_efficiency_from_loaded_df(df, num_nodes):
+    """
+    Plot efficiency degradation from a loaded removal results DataFrame.
+
+    Parameters:
+        df (pd.DataFrame): DataFrame loaded from CSV, containing:
+            - 'normalized_efficiency'
+        num_nodes (int): Total number of nodes in the original graph.
+    """
+    efficiencies = df['normalized_efficiency'].tolist()
+    if efficiencies[0] == 1.0:
+        efficiency_after_each_removal = efficiencies[1:]
+    else:
+        efficiency_after_each_removal = efficiencies
+
+    mock_row = pd.Series({
+        'num_nodes': num_nodes,
+        'efficiency_after_each_removal': efficiency_after_each_removal
+    })
+
+    plot_efficiency_results_from_batch(mock_row)
