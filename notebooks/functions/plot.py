@@ -88,7 +88,7 @@ def plot_efficiency_results(percent_remaining, efficiencies, title="Impact of No
     """
     plt.figure(figsize=(6, 4))
     plt.plot(percent_remaining, efficiencies, marker='o')
-    plt.xlabel("Percentage of Nodes Remaining")
+    plt.xlabel("Percentage Remaining")
     plt.ylabel("Normalized Efficiency")
     plt.title(title)
     plt.grid(True)
