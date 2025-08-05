@@ -119,7 +119,7 @@ def plot_efficiency_with_node_labels(efficiencies, node_names, title="Impact of 
     # Create x-axis labels: first is "Start" or "None", then the removed node names
     x_labels = ["Full Graph"] + node_names
 
-    plt.xticks(ticks=x_positions, labels=x_labels, rotation=0, ha='center')
+    plt.xticks(ticks=x_positions, labels=x_labels, rotation=90, ha='center')
 
     plt.xlabel("Removed Nodes")
     plt.ylabel("Normalized Efficiency")
@@ -687,3 +687,44 @@ def plot_average_efficiency_with_area(results_dir):
     print(f"Std Dev: {np.std(individual_areas):.4f}")
 
     return area_above_avg, df_areas
+
+def plot_efficiency_with_node_labels_from_df(df, title="Network Efficiency over Node Removals"):
+    """
+    Plot normalized efficiency degradation with red line, points, shaded area,
+    and return area above the curve.
+
+    Args:
+        df (pd.DataFrame): Must include 'normalized_efficiency' and 'removed_node_name'
+        title (str): Plot title
+
+    Returns:
+        float: Area above the efficiency curve
+    """
+    efficiencies = df['normalized_efficiency'].tolist()
+    node_labels = df['removed_node_names'].tolist()
+
+    # Prepend full graph efficiency = 1
+    if efficiencies[0] != 1.0:
+        efficiencies = [1.0] + efficiencies
+        node_labels = [''] + node_labels  # Empty label for initial full graph
+
+    x_labels = ['Full Graph'] + node_labels[1:]
+    x_positions = list(range(len(efficiencies)))
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(x_positions, efficiencies, color='red', marker='o', markerfacecolor='red', linewidth=2)
+    plt.fill_between(x_positions, efficiencies, 1.0, color='red', alpha=0.2)
+    plt.xticks(ticks=x_positions, labels=x_labels, rotation=45, ha='center')
+    plt.xlabel("Removed Nodes")
+    plt.ylabel("Normalized Efficiency")
+    plt.title(title)
+    plt.tight_layout()
+    plt.grid(True)
+    plt.show()
+
+    # Compute area above the curve (gap between full efficiency and actual)
+    gap_above = [1 - x for x in efficiencies]
+    area_above = integrate.trapezoid(gap_above, dx=1)
+    print(f"Area above average efficiency line: {area_above:.4f}\n")
+
+    return area_above
