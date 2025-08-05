@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt # type: ignore
 import matplotlib.cm as cm # type: ignore
 import numpy as np 
 import pandas as pd # type: ignore
-from scipy import integrate
+from scipy import integrate # type: ignore
+from pathlib import Path
 
 from bokeh.plotting import figure, show, from_networkx # type: ignore
 from bokeh.models import Circle, MultiLine, HoverTool, LinearColorMapper, ColorBar, WheelZoomTool # type: ignore
@@ -518,20 +519,27 @@ def plot_efficiency_from_loaded_df(df, num_nodes):
 
 def plot_multiple_efficiency_runs(results_dir):
     """
-    Load all CSV files in results_dir and plot their efficiency curves together with inverted x-axis.
+    Load all CSV files in results_dir and plot their efficiency curves with distinct colors and legend,
+    using inverted x-axis.
 
     Args:
-        results_dir (Path or str): Directory containing CSV files named like
-            'random_removal_seed{seed}_nodes{num_nodes}.csv'
+        results_dir (Path or str): Directory containing CSV files.
     """
-    csv_files = list(results_dir.glob("random_removal_seed*_nodes*.csv"))
+    results_dir = Path(results_dir)
+    csv_files = [f for f in results_dir.iterdir() if f.suffix == '.csv']
+
     plt.figure(figsize=(10, 6))
 
     for csv_file in csv_files:
         df = pd.read_csv(csv_file)
         filename = csv_file.name
-        num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
-        num_nodes = int(num_nodes_str)
+
+        try:
+            num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
+            num_nodes = int(num_nodes_str)
+        except (IndexError, ValueError):
+            print(f"Warning: Could not extract num_nodes from filename '{filename}', skipping this file.")
+            continue
 
         efficiencies = df['normalized_efficiency'].tolist()
         if efficiencies[0] == 1.0:
@@ -543,102 +551,54 @@ def plot_multiple_efficiency_runs(results_dir):
 
         efficiencies = [1.0] + efficiencies
 
-        plt.plot(percent_remaining, efficiencies, label=f'Seed {filename.split("_seed")[1].split("_")[0]}')
+        plt.plot(percent_remaining, efficiencies, label=filename)
 
     plt.xlabel("Percentage of Nodes Remaining")
     plt.ylabel("Normalized Efficiency")
-    plt.title("Efficiency Degradation Across Multiple Random Node Removal Runs")
+    plt.title("Efficiency Degradation Across Multiple Runs")
     plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.gca().invert_xaxis()  # Invert x-axis here
-    plt.show()
-
-def plot_multiple_efficiency_runs_average(results_dir):
-    """
-    Load all CSV files in results_dir and plot their efficiency curves together with inverted x-axis.
-    All runs are shown in blue. A red line indicates the average efficiency across all runs,
-    and the area above the red line is shaded in red.
-
-    Args:
-        results_dir (Path or str): Directory containing CSV files named like
-            'random_removal_seed{seed}_nodes{num_nodes}.csv'
-    """
-    import matplotlib.pyplot as plt
-    import pandas as pd
-    import numpy as np
-
-    csv_files = list(results_dir.glob("random_removal_seed*_nodes*.csv"))
-    all_efficiencies = []
-
-    plt.figure(figsize=(10, 6))
-
-    for csv_file in csv_files:
-        df = pd.read_csv(csv_file)
-        filename = csv_file.name
-        num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
-        num_nodes = int(num_nodes_str)
-
-        efficiencies = df['normalized_efficiency'].tolist()
-        if efficiencies[0] == 1.0:
-            efficiencies = efficiencies[1:]
-
-        efficiencies = [1.0] + efficiencies  # Include baseline
-        all_efficiencies.append(efficiencies)
-
-        total_nodes = num_nodes
-        num_removed = list(range(len(efficiencies)))
-        percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
-
-        plt.plot(percent_remaining, efficiencies, color='blue', linewidth=1, alpha=0.6)
-
-    # Compute average efficiency across all runs
-    max_length = max(len(run) for run in all_efficiencies)
-    padded = [run + [run[-1]] * (max_length - len(run)) for run in all_efficiencies]
-    mean_efficiency = np.mean(padded, axis=0)
-
-    avg_percent_remaining = [100 * (num_nodes - n) / num_nodes for n in range(len(mean_efficiency))]
-
-    # Plot average efficiency in red
-    plt.plot(avg_percent_remaining, mean_efficiency, color='red', linewidth=2)
-
-    # Shade above the average line
-    plt.fill_between(avg_percent_remaining, mean_efficiency, 1.0, where=(np.array(mean_efficiency) < 1.0),
-                     interpolate=True, color='red', alpha=0.15)
-
-    plt.xlabel("Percentage of Nodes Remaining")
-    plt.ylabel("Normalized Efficiency")
-    plt.title("Efficiency Degradation Across Multiple Random Node Removal Runs")
     plt.grid(True)
     plt.tight_layout()
     plt.gca().invert_xaxis()
     plt.show()
 
+
 def plot_average_efficiency_with_area(results_dir):
     """
     Load all CSV files in results_dir, compute average efficiency curve,
     plot the average (red) line with red circles at data points and shade the upper area.
+    Also compute and print the area above each curve and its statistics.
 
     Args:
-        results_dir (Path or str): Directory containing CSV files named like
-            'random_removal_seed{seed}_nodes{num_nodes}.csv'
+        results_dir (Path or str): Directory containing CSV files with 'normalized_efficiency' column.
+
+    Returns:
+        float: Area above the average efficiency curve
     """
-    csv_files = list(results_dir.glob("random_removal_seed*_nodes*.csv"))
+    results_dir = Path(results_dir)
+    csv_files = list(results_dir.glob("*.csv"))
     all_efficiencies = []
-    num_nodes = None
+    area_records = []
 
     for csv_file in csv_files:
-        df = pd.read_csv(csv_file)
-        filename = csv_file.name
-        num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
-        num_nodes = int(num_nodes_str)
+        try:
+            df = pd.read_csv(csv_file)
+            efficiencies = df['normalized_efficiency'].tolist()
 
-        efficiencies = df['normalized_efficiency'].tolist()
-        if efficiencies[0] == 1.0:
-            efficiencies = efficiencies[1:]
+            if efficiencies[0] == 1.0:
+                efficiencies = efficiencies[1:]
 
-        efficiencies = [1.0] + efficiencies
-        all_efficiencies.append(efficiencies)
+            efficiencies = [1.0] + efficiencies
+            all_efficiencies.append(efficiencies)
+
+            # Compute area above this curve
+            num_nodes = len(efficiencies) - 1
+            gap_above = [1 - x for x in efficiencies]
+            area = integrate.trapezoid(gap_above, dx=100 / num_nodes)
+            area_records.append({'filename': csv_file.name, 'area_above': area})
+
+        except Exception as e:
+            print(f"Skipping {csv_file.name}: {e}")
 
     max_len = max(len(e) for e in all_efficiencies)
     for i in range(len(all_efficiencies)):
@@ -650,30 +610,38 @@ def plot_average_efficiency_with_area(results_dir):
         for i in range(max_len)
     ]
 
-    num_removed = list(range(max_len))
-    percent_remaining = [100 * (num_nodes - n) / num_nodes for n in num_removed]
+    num_nodes = max_len - 1
+    percent_remaining = [100 * (num_nodes - n) / num_nodes for n in range(max_len)]
 
+    # Plotting
     plt.figure(figsize=(10, 6))
-
-    # Red average line
     plt.plot(percent_remaining, mean_efficiency, color='red')
-
-    # Red circles at each point
-    plt.scatter(percent_remaining, mean_efficiency, color='red', zorder=5)
-
-    # Red shaded area between the mean line and efficiency = 1.0
+    plt.scatter(percent_remaining, mean_efficiency, color='red', edgecolors='none', zorder=5)
     plt.fill_between(percent_remaining, mean_efficiency, 1.0, color='red', alpha=0.3)
 
     plt.xlabel("Percentage of Nodes Remaining")
     plt.ylabel("Normalized Efficiency")
-    plt.title("Average Efficiency Degradation (Red Line, Points, and Upper Area)")
+    plt.title("Average Efficiency Degradation (Red Line and Shaded Area)")
     plt.grid(True)
     plt.tight_layout()
     plt.gca().invert_xaxis()
     plt.show()
 
+    # Area above the average curve
     gap_above_avg = [1 - x for x in mean_efficiency]
     area_above_avg = integrate.trapezoid(gap_above_avg, dx=100 / num_nodes)
+    print(f"\nArea above average efficiency line: {area_above_avg:.4f}")
 
-    print(f"Area above average efficiency line: {area_above_avg:.4f}")
-    return area_above_avg
+    # Display individual areas
+    df_areas = pd.DataFrame(area_records)
+
+    # Summary statistics
+    values = df_areas['area_above']
+    print("\nStatistics over area above efficiency curves:")
+    print(f"Mean   : {values.mean():.4f}")
+    print(f"Median : {values.median():.4f}")
+    print(f"Min    : {values.min():.4f}")
+    print(f"Max    : {values.max():.4f}")
+    print(f"Std Dev: {values.std(ddof=1):.4f}")
+
+    return area_above_avg, df_areas
