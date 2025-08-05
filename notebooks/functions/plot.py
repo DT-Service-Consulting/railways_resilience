@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt # type: ignore
 import matplotlib.cm as cm # type: ignore
 import numpy as np 
 import pandas as pd # type: ignore
+from scipy import integrate
 
 from bokeh.plotting import figure, show, from_networkx # type: ignore
 from bokeh.models import Circle, MultiLine, HoverTool, LinearColorMapper, ColorBar, WheelZoomTool # type: ignore
@@ -552,3 +553,124 @@ def plot_multiple_efficiency_runs(results_dir):
     plt.tight_layout()
     plt.gca().invert_xaxis()  # Invert x-axis here
     plt.show()
+
+def plot_multiple_efficiency_runs_average(results_dir):
+    """
+    Load all CSV files in results_dir and plot their efficiency curves together with inverted x-axis.
+    All runs are shown in blue. A red line indicates the average efficiency across all runs,
+    and the area above the red line is shaded in red.
+
+    Args:
+        results_dir (Path or str): Directory containing CSV files named like
+            'random_removal_seed{seed}_nodes{num_nodes}.csv'
+    """
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import numpy as np
+
+    csv_files = list(results_dir.glob("random_removal_seed*_nodes*.csv"))
+    all_efficiencies = []
+
+    plt.figure(figsize=(10, 6))
+
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+        filename = csv_file.name
+        num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
+        num_nodes = int(num_nodes_str)
+
+        efficiencies = df['normalized_efficiency'].tolist()
+        if efficiencies[0] == 1.0:
+            efficiencies = efficiencies[1:]
+
+        efficiencies = [1.0] + efficiencies  # Include baseline
+        all_efficiencies.append(efficiencies)
+
+        total_nodes = num_nodes
+        num_removed = list(range(len(efficiencies)))
+        percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
+
+        plt.plot(percent_remaining, efficiencies, color='blue', linewidth=1, alpha=0.6)
+
+    # Compute average efficiency across all runs
+    max_length = max(len(run) for run in all_efficiencies)
+    padded = [run + [run[-1]] * (max_length - len(run)) for run in all_efficiencies]
+    mean_efficiency = np.mean(padded, axis=0)
+
+    avg_percent_remaining = [100 * (num_nodes - n) / num_nodes for n in range(len(mean_efficiency))]
+
+    # Plot average efficiency in red
+    plt.plot(avg_percent_remaining, mean_efficiency, color='red', linewidth=2)
+
+    # Shade above the average line
+    plt.fill_between(avg_percent_remaining, mean_efficiency, 1.0, where=(np.array(mean_efficiency) < 1.0),
+                     interpolate=True, color='red', alpha=0.15)
+
+    plt.xlabel("Percentage of Nodes Remaining")
+    plt.ylabel("Normalized Efficiency")
+    plt.title("Efficiency Degradation Across Multiple Random Node Removal Runs")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.gca().invert_xaxis()
+    plt.show()
+
+def plot_average_efficiency_with_area(results_dir):
+    """
+    Load all CSV files in results_dir, compute average efficiency curve,
+    plot the average (red) line and red shaded area above it.
+
+    Args:
+        results_dir (Path or str): Directory containing CSV files named like
+            'random_removal_seed{seed}_nodes{num_nodes}.csv'
+    """
+    csv_files = list(results_dir.glob("random_removal_seed*_nodes*.csv"))
+    all_efficiencies = []
+    num_nodes = None
+
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+        filename = csv_file.name
+        num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
+        num_nodes = int(num_nodes_str)  # Assume all have same number
+
+        efficiencies = df['normalized_efficiency'].tolist()
+        if efficiencies[0] == 1.0:
+            efficiencies = efficiencies[1:]
+
+        efficiencies = [1.0] + efficiencies  # Add initial efficiency
+        all_efficiencies.append(efficiencies)
+
+    # Pad all runs to the same length
+    max_len = max(len(e) for e in all_efficiencies)
+    for i in range(len(all_efficiencies)):
+        if len(all_efficiencies[i]) < max_len:
+            all_efficiencies[i] += [all_efficiencies[i][-1]] * (max_len - len(all_efficiencies[i]))
+
+    # Compute average efficiency
+    mean_efficiency = [
+        sum(run[i] for run in all_efficiencies) / len(all_efficiencies)
+        for i in range(max_len)
+    ]
+
+    # X-axis: percentage of nodes remaining
+    num_removed = list(range(max_len))
+    percent_remaining = [100 * (num_nodes - n) / num_nodes for n in num_removed]
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    plt.plot(percent_remaining, mean_efficiency, color='red')
+    plt.fill_between(percent_remaining, mean_efficiency, 1.0, color='red', alpha=0.3)
+
+    plt.xlabel("Percentage of Nodes Remaining")
+    plt.ylabel("Normalized Efficiency")
+    plt.title("Area of Average Efficiency Degradation")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.gca().invert_xaxis()
+    plt.show()
+
+    # Area above the average line (i.e., between mean_efficiency and 1.0)
+    area_above_avg = integrate.trapezoid([1 - x for x in mean_efficiency], dx=100/num_nodes)
+
+    print(f"Area above average efficiency line: {area_above_avg:.4f}")
+    return area_above_avg
