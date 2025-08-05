@@ -567,18 +567,22 @@ def plot_average_efficiency_with_area(results_dir):
     """
     Load all CSV files in results_dir, compute average efficiency curve,
     plot the average (red) line with red circles at data points and shade the upper area.
-    Also compute and print the area above each curve and its statistics.
+    Also compute and print statistics over individual curve areas.
 
     Args:
         results_dir (Path or str): Directory containing CSV files with 'normalized_efficiency' column.
+                                   Other file types (e.g. .log) will be ignored.
 
     Returns:
         float: Area above the average efficiency curve
     """
     results_dir = Path(results_dir)
-    csv_files = list(results_dir.glob("*.csv"))
+    csv_files = [f for f in results_dir.glob("*.csv")]
+    
     all_efficiencies = []
-    area_records = []
+    all_percent_remaining = []
+    individual_areas = []
+    node_counts = []
 
     for csv_file in csv_files:
         try:
@@ -587,37 +591,44 @@ def plot_average_efficiency_with_area(results_dir):
 
             if efficiencies[0] == 1.0:
                 efficiencies = efficiencies[1:]
-
             efficiencies = [1.0] + efficiencies
-            all_efficiencies.append(efficiencies)
 
-            # Compute area above this curve
-            num_nodes = len(efficiencies) - 1
+            # Extract number of nodes from filename
+            filename = csv_file.name
+            num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
+            total_nodes = int(num_nodes_str)
+            node_counts.append(total_nodes)
+
+            num_removed = list(range(len(efficiencies)))
+            percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
+
+            all_efficiencies.append(efficiencies)
+            all_percent_remaining.append(percent_remaining)
+
+            # Compute individual area above curve
             gap_above = [1 - x for x in efficiencies]
-            area = integrate.trapezoid(gap_above, dx=100 / num_nodes)
-            area_records.append({'filename': csv_file.name, 'area_above': area})
+            area_above = integrate.trapezoid(gap_above, dx=100 / total_nodes)
+            individual_areas.append(area_above)
 
         except Exception as e:
             print(f"Skipping {csv_file.name}: {e}")
 
-    max_len = max(len(e) for e in all_efficiencies)
-    for i in range(len(all_efficiencies)):
-        if len(all_efficiencies[i]) < max_len:
-            all_efficiencies[i] += [all_efficiencies[i][-1]] * (max_len - len(all_efficiencies[i]))
+    if not all_efficiencies:
+        raise ValueError("No valid CSV files with 'normalized_efficiency' found.")
 
-    mean_efficiency = [
-        sum(run[i] for run in all_efficiencies) / len(all_efficiencies)
-        for i in range(max_len)
-    ]
+    # Find the minimum length of the runs to align them
+    min_len = min(len(e) for e in all_efficiencies)
+    truncated_efficiencies = [e[:min_len] for e in all_efficiencies]
+    truncated_percent_remaining = all_percent_remaining[0][:min_len]
 
-    num_nodes = max_len - 1
-    percent_remaining = [100 * (num_nodes - n) / num_nodes for n in range(max_len)]
+    # Compute average efficiency across runs
+    mean_efficiency = np.mean(truncated_efficiencies, axis=0)
 
-    # Plotting
+    # Plot
     plt.figure(figsize=(10, 6))
-    plt.plot(percent_remaining, mean_efficiency, color='red')
-    plt.scatter(percent_remaining, mean_efficiency, color='red', edgecolors='none', zorder=5)
-    plt.fill_between(percent_remaining, mean_efficiency, 1.0, color='red', alpha=0.3)
+    plt.plot(truncated_percent_remaining, mean_efficiency, color='red')
+    plt.scatter(truncated_percent_remaining, mean_efficiency, color='red', edgecolors='none', zorder=5)
+    plt.fill_between(truncated_percent_remaining, mean_efficiency, 1.0, color='red', alpha=0.3)
 
     plt.xlabel("Percentage of Nodes Remaining")
     plt.ylabel("Normalized Efficiency")
@@ -627,21 +638,21 @@ def plot_average_efficiency_with_area(results_dir):
     plt.gca().invert_xaxis()
     plt.show()
 
-    # Area above the average curve
+    # Compute area above average curve
     gap_above_avg = [1 - x for x in mean_efficiency]
-    area_above_avg = integrate.trapezoid(gap_above_avg, dx=100 / num_nodes)
-    print(f"\nArea above average efficiency line: {area_above_avg:.4f}")
+    area_above_avg = integrate.trapezoid(gap_above_avg, dx=(truncated_percent_remaining[0] - truncated_percent_remaining[-1]) / (len(gap_above_avg) - 1))
 
-    # Display individual areas
-    df_areas = pd.DataFrame(area_records)
+    print(f"Area above average efficiency line: {area_above_avg:.4f}\n")
 
-    # Summary statistics
-    values = df_areas['area_above']
+    # Print individual areas and summary statistics
+    df_areas = pd.DataFrame({'File': [f.name for f in csv_files], 'Area Above Curve': individual_areas})
+    print(df_areas.to_string(index=False))
+
     print("\nStatistics over area above efficiency curves:")
-    print(f"Mean   : {values.mean():.4f}")
-    print(f"Median : {values.median():.4f}")
-    print(f"Min    : {values.min():.4f}")
-    print(f"Max    : {values.max():.4f}")
-    print(f"Std Dev: {values.std(ddof=1):.4f}")
+    print(f"Mean   : {np.mean(individual_areas):.4f}")
+    print(f"Median : {np.median(individual_areas):.4f}")
+    print(f"Min    : {np.min(individual_areas):.4f}")
+    print(f"Max    : {np.max(individual_areas):.4f}")
+    print(f"Std Dev: {np.std(individual_areas):.4f}")
 
     return area_above_avg, df_areas
