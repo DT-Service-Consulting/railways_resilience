@@ -98,6 +98,37 @@ def plot_efficiency_results(percent_remaining, efficiencies, title="Impact of No
     plt.tight_layout()
     plt.show()
 
+def plot_efficiency_with_node_labels(efficiencies, node_names, title="Impact of Node Removal on Network Efficiency (Normalized)"):
+    """
+    Plot normalized efficiency vs node removals, using node names as x-axis labels.
+
+    Parameters:
+    - percent_remaining: List of percentage of nodes remaining
+    - efficiencies: Corresponding list of normalized efficiencies
+    - node_names: List of node names in order of removal (length should be len(efficiencies) - 1)
+    - title: Plot title
+    """
+
+    plt.figure(figsize=(10, 5))
+
+    # x positions: include one extra for the starting point (no node removed)
+    x_positions = list(range(len(efficiencies)))
+
+    plt.plot(x_positions, efficiencies, marker='o')
+
+    # Create x-axis labels: first is "Start" or "None", then the removed node names
+    x_labels = ["Full Graph"] + node_names
+
+    plt.xticks(ticks=x_positions, labels=x_labels, rotation=0, ha='center')
+
+    plt.xlabel("Removed Nodes")
+    plt.ylabel("Normalized Efficiency")
+    plt.title(title)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_efficiency_results_from_batch(row):
     """
     Plot the efficiency drop across node removals for a single subgraph.
