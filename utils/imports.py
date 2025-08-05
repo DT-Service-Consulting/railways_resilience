@@ -65,6 +65,7 @@ from notebooks.functions.plot import plot_runtime_vs_density_scatter
 from notebooks.functions.plot import plot_efficiency_results_multi
 from notebooks.functions.plot import analyze_runtime_improvement
 from notebooks.functions.plot import plot_efficiency_from_loaded_df
+from notebooks.functions.plot import plot_multiple_efficiency_runs
 
 from gtfs_railways.functions.v0 import (
     get_all_GTC as get_all_GTC_v0,

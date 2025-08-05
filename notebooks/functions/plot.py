@@ -513,3 +513,42 @@ def plot_efficiency_from_loaded_df(df, num_nodes):
     })
 
     plot_efficiency_results_from_batch(mock_row)
+
+
+def plot_multiple_efficiency_runs(results_dir):
+    """
+    Load all CSV files in results_dir and plot their efficiency curves together with inverted x-axis.
+
+    Args:
+        results_dir (Path or str): Directory containing CSV files named like
+            'random_removal_seed{seed}_nodes{num_nodes}.csv'
+    """
+    csv_files = list(results_dir.glob("random_removal_seed*_nodes*.csv"))
+    plt.figure(figsize=(10, 6))
+
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+        filename = csv_file.name
+        num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
+        num_nodes = int(num_nodes_str)
+
+        efficiencies = df['normalized_efficiency'].tolist()
+        if efficiencies[0] == 1.0:
+            efficiencies = efficiencies[1:]
+
+        total_nodes = num_nodes
+        num_removed = list(range(len(efficiencies) + 1))
+        percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
+
+        efficiencies = [1.0] + efficiencies
+
+        plt.plot(percent_remaining, efficiencies, label=f'Seed {filename.split("_seed")[1].split("_")[0]}')
+
+    plt.xlabel("Percentage of Nodes Remaining")
+    plt.ylabel("Normalized Efficiency")
+    plt.title("Efficiency Degradation Across Multiple Random Node Removal Runs")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.gca().invert_xaxis()  # Invert x-axis here
+    plt.show()
