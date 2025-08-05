@@ -617,7 +617,7 @@ def plot_multiple_efficiency_runs_average(results_dir):
 def plot_average_efficiency_with_area(results_dir):
     """
     Load all CSV files in results_dir, compute average efficiency curve,
-    plot the average (red) line and red shaded area above it.
+    plot the average (red) line with red circles at data points and shade the upper area.
 
     Args:
         results_dir (Path or str): Directory containing CSV files named like
@@ -631,46 +631,49 @@ def plot_average_efficiency_with_area(results_dir):
         df = pd.read_csv(csv_file)
         filename = csv_file.name
         num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
-        num_nodes = int(num_nodes_str)  # Assume all have same number
+        num_nodes = int(num_nodes_str)
 
         efficiencies = df['normalized_efficiency'].tolist()
         if efficiencies[0] == 1.0:
             efficiencies = efficiencies[1:]
 
-        efficiencies = [1.0] + efficiencies  # Add initial efficiency
+        efficiencies = [1.0] + efficiencies
         all_efficiencies.append(efficiencies)
 
-    # Pad all runs to the same length
     max_len = max(len(e) for e in all_efficiencies)
     for i in range(len(all_efficiencies)):
         if len(all_efficiencies[i]) < max_len:
             all_efficiencies[i] += [all_efficiencies[i][-1]] * (max_len - len(all_efficiencies[i]))
 
-    # Compute average efficiency
     mean_efficiency = [
         sum(run[i] for run in all_efficiencies) / len(all_efficiencies)
         for i in range(max_len)
     ]
 
-    # X-axis: percentage of nodes remaining
     num_removed = list(range(max_len))
     percent_remaining = [100 * (num_nodes - n) / num_nodes for n in num_removed]
 
-    # Plot
     plt.figure(figsize=(10, 6))
+
+    # Red average line
     plt.plot(percent_remaining, mean_efficiency, color='red')
+
+    # Red circles at each point
+    plt.scatter(percent_remaining, mean_efficiency, color='red', zorder=5)
+
+    # Red shaded area between the mean line and efficiency = 1.0
     plt.fill_between(percent_remaining, mean_efficiency, 1.0, color='red', alpha=0.3)
 
     plt.xlabel("Percentage of Nodes Remaining")
     plt.ylabel("Normalized Efficiency")
-    plt.title("Area of Average Efficiency Degradation")
+    plt.title("Average Efficiency Degradation (Red Line, Points, and Upper Area)")
     plt.grid(True)
     plt.tight_layout()
     plt.gca().invert_xaxis()
     plt.show()
 
-    # Area above the average line (i.e., between mean_efficiency and 1.0)
-    area_above_avg = integrate.trapezoid([1 - x for x in mean_efficiency], dx=100/num_nodes)
+    gap_above_avg = [1 - x for x in mean_efficiency]
+    area_above_avg = integrate.trapezoid(gap_above_avg, dx=100 / num_nodes)
 
     print(f"Area above average efficiency line: {area_above_avg:.4f}")
     return area_above_avg
