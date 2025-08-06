@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt # type: ignore
 import matplotlib.cm as cm # type: ignore
+from matplotlib.lines import Line2D # type: ignore
 import numpy as np 
 import pandas as pd # type: ignore
 from scipy import integrate # type: ignore
@@ -265,23 +266,35 @@ def plot_efficiency_decay(df, graphs_per_group=2, color_map=None, title="Efficie
     plt.tight_layout()
     plt.show()
 
-def remove_node_edges_and_plot(G, node):
+def remove_node_edges_and_plot(G, nodes):
     """
-    Removes all edges connected to the specified node from the graph and plots the result.
+    Removes all edges connected to the specified list of nodes from the graph.
+    Prints a message if a node does not exist in the graph.
 
     Parameters:
         G (networkx.Graph): The graph to modify (passed by reference).
-        node: The node whose edges will be removed.
-        back_map (str): Parameter passed to plot_graph function for background map.
+        nodes (list): List of nodes whose edges will be removed.
+
+    Returns:
+        networkx.Graph: The modified graph with specified edges removed.
     """
-    if G.is_directed():
-        edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
-    else:
-        edges_to_remove = list(G.edges(node))
+    if not isinstance(nodes, list):
+        nodes = [nodes]  # Ensure single node inputs also work
+
+    edges_to_remove = []
+    
+    for node in nodes:
+        if G.has_node(node):
+            if G.is_directed():
+                edges_to_remove += list(G.in_edges(node)) + list(G.out_edges(node))
+            else:
+                edges_to_remove += list(G.edges(node))
+        else:
+            print(f"Node '{node}' not found in the graph. Skipping.")
 
     G.remove_edges_from(edges_to_remove)
-
     return G
+
 
 
 def plot_runtime_comparison(runtimes, subgraph_sizes, versions, colors, bar_width=0.2, group_gap=0.3):
@@ -548,13 +561,17 @@ def plot_efficiency_from_loaded_df(df, num_nodes):
     plot_efficiency_results_from_batch(mock_row)
 
 
-def plot_multiple_efficiency_runs(results_dir):
+def plot_multiple_efficiency_runs(results_dir, color='blue', title='Efficiency Degradation Across Multiple Runs', legend=False):
     """
-    Load all CSV files in results_dir and plot their efficiency curves with distinct colors and legend,
-    using inverted x-axis.
+    Load all CSV files in results_dir and plot their efficiency curves.
+    If legend=True, each run is plotted with a unique color and labeled in the legend.
+    If legend=False, all runs are plotted in the same color with no legend.
 
     Args:
         results_dir (Path or str): Directory containing CSV files.
+        color (str): Color for all lines if legend is False.
+        title (str): Title of the plot.
+        legend (bool): Whether to use a legend with unique colors.
     """
     results_dir = Path(results_dir)
     csv_files = [f for f in results_dir.iterdir() if f.suffix == '.csv']
@@ -576,21 +593,79 @@ def plot_multiple_efficiency_runs(results_dir):
         if efficiencies[0] == 1.0:
             efficiencies = efficiencies[1:]
 
+        efficiencies = [1.0] + efficiencies
         total_nodes = num_nodes
-        num_removed = list(range(len(efficiencies) + 1))
+        num_removed = list(range(len(efficiencies)))
         percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
 
-        efficiencies = [1.0] + efficiencies
-
-        plt.plot(percent_remaining, efficiencies, label=filename)
+        if legend:
+            plt.plot(percent_remaining, efficiencies, label=filename)
+        else:
+            plt.plot(percent_remaining, efficiencies, color=color)
 
     plt.xlabel("Percentage of Nodes Remaining")
     plt.ylabel("Normalized Efficiency")
-    plt.title("Efficiency Degradation Across Multiple Runs")
-    plt.legend()
+    plt.title(title)
     plt.grid(True)
     plt.tight_layout()
     plt.gca().invert_xaxis()
+
+    if legend:
+        plt.legend()
+
+    plt.show()
+
+
+def plot_efficiency_comparison(run_configs, title='Efficiency Comparison'):
+    """
+    Plot efficiency curves from multiple country/configuration directories.
+
+    Args:
+        run_configs (list of dict): Each dict must have keys 'dir', 'color', and 'label'.
+        title (str): Title for the plot.
+    """
+    plt.figure(figsize=(10, 6))
+
+    legend_elements = []
+
+    for config in run_configs:
+        directory = Path(config['dir'])
+        color = config['color']
+        label = config['label']
+
+        csv_files = [f for f in directory.iterdir() if f.suffix == '.csv']
+
+        for csv_file in csv_files:
+            df = pd.read_csv(csv_file)
+            filename = csv_file.name
+
+            try:
+                num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
+                num_nodes = int(num_nodes_str)
+            except (IndexError, ValueError):
+                print(f"Warning: Could not extract num_nodes from filename '{filename}', skipping this file.")
+                continue
+
+            efficiencies = df['normalized_efficiency'].tolist()
+            if efficiencies[0] == 1.0:
+                efficiencies = efficiencies[1:]
+            efficiencies = [1.0] + efficiencies
+
+            total_nodes = num_nodes
+            num_removed = list(range(len(efficiencies)))
+            percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
+
+            plt.plot(percent_remaining, efficiencies, color=color)
+
+        legend_elements.append(Line2D([0], [0], color=color, lw=2, label=label))
+
+    plt.xlabel("Percentage of Nodes Remaining")
+    plt.ylabel("Normalized Efficiency")
+    plt.title(title)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.gca().invert_xaxis()
+    plt.legend(handles=legend_elements)
     plt.show()
 
 
