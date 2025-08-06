@@ -616,18 +616,24 @@ def plot_multiple_efficiency_runs(results_dir, color='blue', title='Efficiency D
     plt.show()
 
 
-def plot_efficiency_comparison(run_configs, title='Efficiency Comparison'):
+def plot_efficiency_comparison(run_configs, title='Efficiency Comparison', xlim=None):
     """
-    Plot efficiency curves from multiple country/configuration directories.
+    Plot efficiency curves from multiple run directories (countries) side-by-side:
+    Left plot: individual curves colored by group with legend.
+    Right plot: average curve with shaded area for each group.
 
     Args:
         run_configs (list of dict): Each dict must have keys 'dir', 'color', and 'label'.
-        title (str): Title for the plot.
+        title (str): Title for the whole figure.
+        xlim (tuple, optional): (min_x, max_x) range to zoom in on x-axis (percent nodes remaining).
     """
-    plt.figure(figsize=(10, 6))
+    fig, axs = plt.subplots(1, 2, figsize=(16, 6))
+
+    ax1, ax2 = axs
 
     legend_elements = []
 
+    # --- LEFT PLOT: individual curves ---
     for config in run_configs:
         directory = Path(config['dir'])
         color = config['color']
@@ -643,7 +649,6 @@ def plot_efficiency_comparison(run_configs, title='Efficiency Comparison'):
                 num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
                 num_nodes = int(num_nodes_str)
             except (IndexError, ValueError):
-                print(f"Warning: Could not extract num_nodes from filename '{filename}', skipping this file.")
                 continue
 
             efficiencies = df['normalized_efficiency'].tolist()
@@ -655,18 +660,79 @@ def plot_efficiency_comparison(run_configs, title='Efficiency Comparison'):
             num_removed = list(range(len(efficiencies)))
             percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
 
-            plt.plot(percent_remaining, efficiencies, color=color)
+            ax1.plot(percent_remaining, efficiencies, color=color)
 
         legend_elements.append(Line2D([0], [0], color=color, lw=2, label=label))
 
-    plt.xlabel("Percentage of Nodes Remaining")
-    plt.ylabel("Normalized Efficiency")
-    plt.title(title)
-    plt.grid(True)
-    plt.tight_layout()
-    plt.gca().invert_xaxis()
-    plt.legend(handles=legend_elements)
+    ax1.set_xlabel("Percentage of Nodes Remaining")
+    ax1.set_ylabel("Normalized Efficiency")
+    ax1.set_title("Individual Efficiency Curves")
+    ax1.grid(True)
+    ax1.invert_xaxis()
+    ax1.legend(handles=legend_elements)
+
+    # --- RIGHT PLOT: average curves with shaded area ---
+    for config in run_configs:
+        directory = Path(config['dir'])
+        color = config['color']
+        label = config['label']
+
+        csv_files = [f for f in directory.iterdir() if f.suffix == '.csv']
+
+        all_efficiencies = []
+        all_percent_remaining = []
+
+        for csv_file in csv_files:
+            try:
+                df = pd.read_csv(csv_file)
+                efficiencies = df['normalized_efficiency'].tolist()
+
+                if efficiencies[0] == 1.0:
+                    efficiencies = efficiencies[1:]
+                efficiencies = [1.0] + efficiencies
+
+                filename = csv_file.name
+                num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
+                total_nodes = int(num_nodes_str)
+
+                num_removed = list(range(len(efficiencies)))
+                percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
+
+                all_efficiencies.append(efficiencies)
+                all_percent_remaining.append(percent_remaining)
+
+            except Exception:
+                continue
+
+        if not all_efficiencies:
+            continue
+
+        min_len = min(len(e) for e in all_efficiencies)
+        truncated_efficiencies = [e[:min_len] for e in all_efficiencies]
+        truncated_percent_remaining = all_percent_remaining[0][:min_len]
+
+        mean_efficiency = np.mean(truncated_efficiencies, axis=0)
+
+        ax2.plot(truncated_percent_remaining, mean_efficiency, color=color, label=label)
+        ax2.fill_between(truncated_percent_remaining, mean_efficiency, 1.0, color=color, alpha=0.3)
+
+    ax2.set_xlabel("Percentage of Nodes Remaining")
+    ax2.set_ylabel("Normalized Efficiency")
+    ax2.set_title("Average Efficiency Curves with Shaded Areas")
+    ax2.grid(True)
+    ax2.invert_xaxis()
+    ax2.legend()
+
+    # Apply zoom range if specified
+    if xlim:
+        ax1.set_xlim(xlim)
+        ax2.set_xlim(xlim)
+
+    fig.suptitle(title)
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
+
+
 
 
 def plot_average_efficiency_with_area(results_dir):
