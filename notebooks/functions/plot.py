@@ -616,7 +616,71 @@ def plot_multiple_efficiency_runs(results_dir, color='blue', title='Efficiency D
     plt.show()
 
 
-def plot_efficiency_comparison(run_configs, title='Efficiency Comparison', xlim=None):
+def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
+    """
+    Plot efficiency curves for multiple runs on the same graph,
+    shading the area above each curve and calculating the area value.
+
+    Args:
+        run_configs (list of dict): Each dict must have keys:
+            'fil' (Path or str to CSV file), 'color', 'label'
+        title (str): Plot title
+        xlim (tuple, optional): (min_x, max_x) range for zoom (percent nodes remaining).
+                                Tuple order does not matter; output is always descending.
+    """
+    plt.figure(figsize=(10, 6))
+    areas_above = {}
+
+    for cfg in run_configs:
+        df = pd.read_csv(cfg['fil'])
+        efficiencies = df['normalized_efficiency'].tolist()
+
+        # Ensure starting point at 1.0
+        if efficiencies[0] == 1.0:
+            efficiencies = efficiencies[1:]
+        efficiencies = [1.0] + efficiencies
+
+        # Extract total nodes from filename
+        filename = Path(cfg['fil']).name
+        num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
+        total_nodes = int(num_nodes_str)
+
+        num_removed = list(range(len(efficiencies)))
+        percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
+
+        # Calculate area above curve
+        gap_above = [1 - x for x in efficiencies]
+        area_above = integrate.trapezoid(gap_above, dx=100 / total_nodes)
+        areas_above[cfg['label']] = area_above
+
+        # Plot line and shaded area above curve
+        plt.plot(percent_remaining, efficiencies, color=cfg['color'], label=cfg['label'])
+        plt.fill_between(percent_remaining, efficiencies, 1.0, color=cfg['color'], alpha=0.3)
+
+    # Apply zoom if specified
+    if xlim:
+        plt.xlim(xlim)
+
+    # Always ensure descending x-axis
+    if plt.gca().get_xlim()[0] < plt.gca().get_xlim()[1]:
+        plt.gca().invert_xaxis()
+
+    plt.xlabel("Percentage of Nodes Remaining")
+    plt.ylabel("Normalized Efficiency")
+    plt.title(title)
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    # Print area results
+    for label, area in areas_above.items():
+        print(f"Area above curve ({label}): {area:.4f}")
+
+    return areas_above
+
+
+def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison', xlim=None):
     """
     Plot efficiency curves from multiple run directories (countries) side-by-side:
     Left plot: individual curves colored by group with legend.

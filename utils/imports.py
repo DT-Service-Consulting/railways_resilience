@@ -69,7 +69,8 @@ from notebooks.functions.plot import plot_multiple_efficiency_runs
 from notebooks.functions.plot import plot_average_efficiency_with_area
 from notebooks.functions.plot import plot_efficiency_with_node_labels
 from notebooks.functions.plot import plot_efficiency_with_node_labels_from_df
-from notebooks.functions.plot import plot_efficiency_comparison
+from notebooks.functions.plot import plot_efficiency_comparison_multi
+from notebooks.functions.plot import plot_efficiency_comparison_single
 
 from gtfs_railways.functions.v0 import (
     get_all_GTC as get_all_GTC_v0,
