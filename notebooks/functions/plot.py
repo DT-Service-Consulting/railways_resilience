@@ -626,6 +626,13 @@ def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
     plt.figure(figsize=(10, 6))
     areas_above = {}
 
+    # plt.rcParams.update({
+    #     'axes.titlesize': 22,      # Title font size for subplots
+    #     'axes.labelsize': 24,      # X and Y label size
+    #     'legend.fontsize': 16,     # Legend font size
+    #     'figure.titlesize': 18     # Figure-level title font size
+    # })
+
     for cfg in run_configs:
         df = pd.read_csv(cfg['fil'])
         efficiencies = df['normalized_efficiency'].tolist()
@@ -684,13 +691,20 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
     Args:
         run_configs (list of dict): Each dict must have keys 'dir', 'color', and 'label'.
         title (str): Title for the whole figure.
-        xlim (tuple, optional): (min_x, max_x) range to zoom in on x-axis (percent nodes remaining).
+        xlim (tuple, optional): (min_x, max_x) range to zoom in on x-axis (percent remaining).
     """
     fig, axs = plt.subplots(1, 2, figsize=(16, 6))
     ax1, ax2 = axs
     legend_elements = []
     plotted_left = False
     plotted_right = False
+
+    # plt.rcParams.update({
+    #     'axes.titlesize': 22,      # Title font size for subplots
+    #     'axes.labelsize': 24,      # X and Y label size
+    #     'legend.fontsize': 16,     # Legend font size
+    #     'figure.titlesize': 18     # Figure-level title font size
+    # })
 
     # --- LEFT PLOT: individual curves ---
     for config in run_configs:
@@ -703,12 +717,17 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
         for csv_file in csv_files:
             try:
                 filename = csv_file.name
-                if "_nodes" not in filename:
-                    print(f"Warning: Could not extract number of nodes from '{filename}', skipping.")
+
+                # --- Support for both nodes and edges ---
+                if "_nodes" in filename:
+                    num_str = filename.split("_nodes")[-1].replace(".csv", "")
+                elif "_edges" in filename:
+                    num_str = filename.split("_edges")[-1].replace(".csv", "")
+                else:
+                    print(f"Warning: Could not extract number from '{filename}', skipping.")
                     continue
 
-                num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
-                total_nodes = int(num_nodes_str)
+                total_elements = int(num_str)
 
                 df = pd.read_csv(csv_file)
                 if 'normalized_efficiency' not in df.columns:
@@ -721,7 +740,7 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
                 efficiencies = [1.0] + efficiencies
 
                 num_removed = list(range(len(efficiencies)))
-                percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
+                percent_remaining = [100 * (total_elements - n) / total_elements for n in num_removed]
 
                 ax1.plot(percent_remaining, efficiencies, color=color)
                 plotted_left = True
@@ -732,7 +751,7 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
 
         legend_elements.append(Line2D([0], [0], color=color, lw=2, label=label))
 
-    ax1.set_xlabel("Percentage of Nodes Remaining")
+    ax1.set_xlabel("Percentage Remaining")
     ax1.set_ylabel("Normalized Efficiency")
     ax1.set_title("Individual Efficiency Curves")
     ax1.grid(True)
@@ -753,12 +772,17 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
         for csv_file in csv_files:
             try:
                 filename = csv_file.name
-                if "_nodes" not in filename:
-                    print(f"Warning: Could not extract number of nodes from '{filename}', skipping.")
+
+                # --- Support for both nodes and edges ---
+                if "_nodes" in filename:
+                    num_str = filename.split("_nodes")[-1].replace(".csv", "")
+                elif "_edges" in filename:
+                    num_str = filename.split("_edges")[-1].replace(".csv", "")
+                else:
+                    print(f"Warning: Could not extract number from '{filename}', skipping.")
                     continue
 
-                num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
-                total_nodes = int(num_nodes_str)
+                total_elements = int(num_str)
 
                 df = pd.read_csv(csv_file)
                 if 'normalized_efficiency' not in df.columns:
@@ -771,7 +795,7 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
                 efficiencies = [1.0] + efficiencies
 
                 num_removed = list(range(len(efficiencies)))
-                percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
+                percent_remaining = [100 * (total_elements - n) / total_elements for n in num_removed]
 
                 all_efficiencies.append(efficiencies)
                 all_percent_remaining.append(percent_remaining)
@@ -793,9 +817,9 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
         ax2.fill_between(truncated_percent_remaining, mean_efficiency, 1.0, color=color, alpha=0.3)
         plotted_right = True
 
-    ax2.set_xlabel("Percentage of Nodes Remaining")
+    ax2.set_xlabel("Percentage Remaining")
     ax2.set_ylabel("Normalized Efficiency")
-    ax2.set_title("Average Efficiency Curves with Shaded Areas")
+    ax2.set_title("Average Efficiency Curves")
     ax2.grid(True)
     ax2.invert_xaxis()
     if plotted_right:

@@ -46,6 +46,7 @@ from gtfs_railways.functions.core import manual_merge
 from gtfs_railways.functions.core import sanity_check
 from gtfs_railways.functions.core import process_route_data
 from gtfs_railways.functions.core import node_degrees_table
+from gtfs_railways.functions.core import stations_trains_df
 from gtfs_railways.functions.core import edge_merger
 from gtfs_railways.functions.core import load_removal_results_df
 from gtfs_railways.functions.core import export_removal_results_to_csv
