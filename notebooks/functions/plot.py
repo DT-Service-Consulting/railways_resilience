@@ -620,18 +620,20 @@ def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
         run_configs (list of dict): Each dict must have keys:
             'fil' (Path or str to CSV file), 'color', 'label'
         title (str): Plot title
-        xlim (tuple, optional): (min_x, max_x) range for zoom (percent nodes remaining).
+        xlim (tuple, optional): (min_x, max_x) range for zoom (percent remaining).
                                 Tuple order does not matter; output is always descending.
     """
     plt.figure(figsize=(10, 6))
     areas_above = {}
 
-    # plt.rcParams.update({
-    #     'axes.titlesize': 22,      # Title font size for subplots
-    #     'axes.labelsize': 24,      # X and Y label size
-    #     'legend.fontsize': 16,     # Legend font size
-    #     'figure.titlesize': 18     # Figure-level title font size
-    # })
+    # Decide whether we're working with nodes or edges based on the first file
+    filename0 = Path(run_configs[0]['fil']).name
+    if "_nodes" in filename0:
+        keyword = "_nodes"
+    elif "_edges" in filename0:
+        keyword = "_edges"
+    else:
+        raise ValueError("Filenames must contain either '_nodes' or '_edges'")
 
     for cfg in run_configs:
         df = pd.read_csv(cfg['fil'])
@@ -642,17 +644,19 @@ def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
             efficiencies = efficiencies[1:]
         efficiencies = [1.0] + efficiencies
 
-        # Extract total nodes from filename
+        # Extract total count from filename
         filename = Path(cfg['fil']).name
-        num_nodes_str = filename.split("_nodes")[-1].replace(".csv", "")
-        total_nodes = int(num_nodes_str)
+        if keyword not in filename:
+            raise ValueError(f"Inconsistent file naming: expected {keyword} in {filename}")
+        num_str = filename.split(keyword)[-1].replace(".csv", "")
+        total_count = int(num_str)
 
         num_removed = list(range(len(efficiencies)))
-        percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
+        percent_remaining = [100 * (total_count - n) / total_count for n in num_removed]
 
         # Calculate area above curve
         gap_above = [1 - x for x in efficiencies]
-        area_above = integrate.trapezoid(gap_above, dx=100 / total_nodes)
+        area_above = integrate.trapezoid(gap_above, dx=100 / total_count)
         areas_above[cfg['label']] = area_above
 
         # Plot line and shaded area above curve
@@ -667,7 +671,7 @@ def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
     if plt.gca().get_xlim()[0] < plt.gca().get_xlim()[1]:
         plt.gca().invert_xaxis()
 
-    plt.xlabel("Percentage of Nodes Remaining")
+    plt.xlabel(f"Percentage of {keyword.strip('_').capitalize()} Remaining")
     plt.ylabel("Normalized Efficiency")
     plt.title(title)
     plt.grid(True)
