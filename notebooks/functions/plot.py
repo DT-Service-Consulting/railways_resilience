@@ -10,6 +10,7 @@ import re
 from bokeh.plotting import figure, show, from_networkx # type: ignore
 from bokeh.models import Circle, MultiLine, HoverTool, LinearColorMapper, ColorBar, WheelZoomTool # type: ignore
 from bokeh.tile_providers import get_provider, Vendors # type: ignore
+from bokeh.palettes import Category10, Category20 # type: ignore
 from bokeh.io.export import export_png # type: ignore
 from pyproj import Transformer # type: ignore
 from bokeh.models import GMapOptions # type: ignore
@@ -80,6 +81,74 @@ def plot_graph(G, space="L", back_map=False, MAPS_API_KEY=None, color_by="", edg
         export_png(p, filename=export_name + ".png")
     else:
         show(p)
+
+def plot_nodes_highlight(G, nodes, back_map="OSM", MAPS_API_KEY=None):
+    """
+    Plot the graph with given nodes highlighted in different colors.
+
+    Args:
+        G (nx.Graph): Graph with 'lat' and 'lon' node attributes.
+        nodes (list): Node IDs to highlight.
+        back_map (str): "OSM", "GMAPS", or None.
+        MAPS_API_KEY (str, optional): Required if back_map == "GMAPS".
+    """
+    if not isinstance(nodes, (list, tuple, set)):
+        nodes = [nodes]
+
+    if back_map == "GMAPS":
+        first_node = next(iter(G.nodes(data=True)))
+        map_options = GMapOptions(lat=first_node[1]["lat"],
+                                  lng=first_node[1]["lon"],
+                                  map_type="roadmap",
+                                  zoom=11)
+        p = gmap(MAPS_API_KEY, map_options)
+    else:
+        p = figure(height=600, width=950, toolbar_location="below",
+                   tools="pan, wheel_zoom, box_zoom, reset, save")
+
+    # Build node position dictionary
+    pos_dict = {}
+    transformer = Transformer.from_crs("epsg:4326", "epsg:3857", always_xy=True)
+    for i, d in G.nodes(data=True):
+        if back_map == "OSM":
+            x2, y2 = transformer.transform(float(d["lon"]), float(d["lat"]))
+        else:
+            x2, y2 = float(d["lon"]), float(d["lat"])
+        pos_dict[i] = (x2, y2)
+
+    graph = from_networkx(G, layout_function=pos_dict)
+
+    # Default node/edge styling
+    graph.node_renderer.glyph = Circle(size=7, fill_color="gray")
+    graph.edge_renderer.glyph = MultiLine(line_width=2, line_alpha=0.5)
+
+    # Choose color palette
+    palette = Category20[20] if len(nodes) > 10 else Category10[10]
+
+    # Highlight each requested node
+    for idx, node in enumerate(nodes):
+        if node in pos_dict:
+            color = palette[idx % len(palette)]
+            x, y = [pos_dict[node][0]], [pos_dict[node][1]]
+            p.circle(x=x, y=y, size=15, color=color, legend_label=f"Node {node}")
+        else:
+            print(f"Node {node} not found in graph")
+
+    # Add hover tools
+    node_hover_tool = HoverTool(tooltips=[("index", "@index"), ("name", "@name")],
+                                renderers=[graph.node_renderer])
+    p.add_tools(node_hover_tool)
+
+    p.toolbar.active_scroll = p.select_one(WheelZoomTool)
+    p.renderers.append(graph)
+
+    if back_map == "OSM":
+        p.add_tile(get_provider(Vendors.CARTODBPOSITRON))
+
+    p.legend.location = "top_left"
+    p.legend.click_policy = "hide"
+
+    show(p)
 
 def plot_efficiency_results(percent_remaining, efficiencies, title="Impact of Node Removal on Network Efficiency (Normalized)"):
     """
