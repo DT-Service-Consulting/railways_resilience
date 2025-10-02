@@ -169,6 +169,28 @@ def plot_efficiency_results(percent_remaining, efficiencies, title="Impact of No
     plt.tight_layout()
     plt.show()
 
+def plot_efficiency_vs_custom_nodes(efficiencies, removed_nodes, title="Normalized Efficiency vs Removed Nodes"):
+    """
+    Plots normalized efficiency vs the actual node IDs removed, including initial efficiency.
+
+    Parameters:
+    - efficiencies: List of efficiency values at each removal step (first value = initial graph)
+    - removed_nodes: List of node IDs removed in order
+    - title: Plot title
+    """
+    # X-axis: initial graph + removed nodes
+    x_axis = ["Initial"] + removed_nodes
+    normalized_eff = [eff / efficiencies[0] for eff in efficiencies]
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(x_axis, normalized_eff, marker='o')
+    plt.xlabel("Node Removed")
+    plt.ylabel("Normalized Efficiency")
+    plt.title(title)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
 def plot_efficiency_with_node_labels(efficiencies, node_names, title="Impact of Node Removal on Network Efficiency (Normalized)"):
     """
     Plot normalized efficiency vs node removals, using node names as x-axis labels.
@@ -728,9 +750,26 @@ def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
         area_above = integrate.trapezoid(gap_above, dx=100 / total_count)
         areas_above[cfg['label']] = area_above
 
-        # Plot line and shaded area above curve
-        plt.plot(percent_remaining, efficiencies, color=cfg['color'], label=cfg['label'])
+        # Plot smooth line
+        plt.plot(
+            percent_remaining,
+            efficiencies,
+            color=cfg['color'],
+            label=cfg['label']
+        )
+
+        # Overlay scatter points
+        plt.scatter(
+            percent_remaining,
+            efficiencies,
+            color=cfg['color'],
+            s=15,        # point size
+            alpha=0.7
+        )
+
+        # Shade area above curve
         plt.fill_between(percent_remaining, efficiencies, 1.0, color=cfg['color'], alpha=0.3)
+
 
     # Apply zoom if specified
     if xlim:
