@@ -6,6 +6,7 @@ trash
 data/sqlite/belgium.sqlite
 data/sqlite/*.sqlite
 data/ireland
+data/belgium
 .DS_Store
 
 __pycache__/
