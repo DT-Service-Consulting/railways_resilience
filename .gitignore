@@ -5,6 +5,7 @@ setup.sh
 trash
 data/sqlite/belgium.sqlite
 data/sqlite/*.sqlite
+data/ireland
 .DS_Store
 
 __pycache__/
