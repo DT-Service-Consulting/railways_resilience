@@ -50,6 +50,9 @@ from gtfs_railways.functions.core import stations_trains_df
 from gtfs_railways.functions.core import edge_merger
 from gtfs_railways.functions.core import load_removal_results_df
 from gtfs_railways.functions.core import export_removal_results_to_csv
+from gtfs_railways.functions.core import select_nodes_bokeh
+from gtfs_railways.functions.core import make_subgraph_from_nodes
+from gtfs_railways.functions.core import save_subgraph_as_pickle
 
 from notebooks.functions.plot import plot_efficiency_results
 from notebooks.functions.plot import plot_graph
