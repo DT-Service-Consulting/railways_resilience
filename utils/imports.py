@@ -19,7 +19,8 @@ from gtfs_railways.functions.core import make_sp_func
 from gtfs_railways.functions.core import simulate_fixed_node_removal_efficiency
 from gtfs_railways.functions.core import random_node_removal
 from gtfs_railways.functions.core import targeted_node_removal
-from gtfs_railways.functions.core import betweenness_node_removal
+from gtfs_railways.functions.core import betweenness_node_removal_weighted
+from gtfs_railways.functions.core import betweenness_node_removal_unweighted
 from gtfs_railways.functions.core import run_removal_simulations
 from gtfs_railways.functions.core import compute_time
 from gtfs_railways.functions.core import get_runtime
@@ -53,6 +54,17 @@ from gtfs_railways.functions.core import export_removal_results_to_csv
 from gtfs_railways.functions.core import select_nodes_bokeh
 from gtfs_railways.functions.core import make_subgraph_from_nodes
 from gtfs_railways.functions.core import save_subgraph_as_pickle
+from gtfs_railways.functions.core import top_hubs_node_removal
+from gtfs_railways.functions.core import top_train_hubs_node_removal
+from gtfs_railways.functions.core import custom_node_removal
+from gtfs_railways.functions.core import random_edge_removal
+from gtfs_railways.functions.core import targeted_edge_removal
+from gtfs_railways.functions.core import betweenness_edge_removal_weighted
+from gtfs_railways.functions.core import betweenness_edge_removal_unweighted
+from gtfs_railways.functions.core import betweenness_node_removal_weighted_least
+from gtfs_railways.functions.core import betweenness_node_removal_unweighted_least
+from gtfs_railways.functions.core import betweenness_edge_removal_weighted_least
+from gtfs_railways.functions.core import betweenness_edge_removal_unweighted_least
 
 from notebooks.functions.plot import plot_efficiency_results
 from notebooks.functions.plot import plot_graph
