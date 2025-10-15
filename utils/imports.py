@@ -67,6 +67,8 @@ from gtfs_railways.functions.core import betweenness_edge_removal_weighted_least
 from gtfs_railways.functions.core import betweenness_edge_removal_unweighted_least
 from gtfs_railways.functions.core import targeted_node_removal_least
 from gtfs_railways.functions.core import targeted_edge_removal_least
+from gtfs_railways.functions.core import random_node_removal_average
+from gtfs_railways.functions.core import random_edge_removal_average
 
 from notebooks.functions.plot import plot_efficiency_results
 from notebooks.functions.plot import plot_graph
