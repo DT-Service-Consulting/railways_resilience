@@ -655,22 +655,29 @@ def plot_efficiency_from_loaded_df(df, num_nodes):
 
 def plot_multiple_efficiency_runs(results_dir, color='blue', title='Efficiency Degradation Across Multiple Runs', legend=False):
     """
-    Load all CSV files in results_dir and plot their efficiency curves.
+    Plot individual efficiency runs, then a separate plot showing mean efficiency ± std deviation.
     Works for filenames containing either 'nodesX' or 'edgesX' at the end before .csv.
     """
     results_dir = Path(results_dir)
     csv_files = [f for f in results_dir.iterdir() if f.suffix == '.csv']
 
+    if not csv_files:
+        print("No CSV files found in the directory.")
+        return
+
+    # -------- FIRST PLOT: Individual Runs --------
     plt.figure(figsize=(10, 6))
+
+    all_curves = []
+    common_x = np.linspace(0, 100, 100)  # Common 0–100% scale for interpolation
 
     for csv_file in csv_files:
         df = pd.read_csv(csv_file)
-        filename = csv_file.stem  # name without .csv
+        filename = csv_file.stem
 
-        # Match nodes<number> or edges<number> anywhere in the filename
         match = re.search(r'(nodes|edges)(\d+)', filename)
         if match:
-            num_nodes = int(match.group(2))
+            total_nodes = int(match.group(2))
         else:
             print(f"Warning: Could not extract number of nodes/edges from filename '{filename}', skipping this file.")
             continue
@@ -680,14 +687,18 @@ def plot_multiple_efficiency_runs(results_dir, color='blue', title='Efficiency D
             efficiencies = efficiencies[1:]
 
         efficiencies = [1.0] + efficiencies
-        total_nodes = num_nodes
         num_removed = list(range(len(efficiencies)))
         percent_remaining = [100 * (total_nodes - n) / total_nodes for n in num_removed]
 
+        # Interpolate to common x for averaging later
+        interp_eff = np.interp(common_x, percent_remaining[::-1], efficiencies[::-1])
+        all_curves.append(interp_eff)
+
+        # Plot individual run
         if legend:
-            plt.plot(percent_remaining, efficiencies, label=filename)
+            plt.plot(percent_remaining, efficiencies, label=filename, alpha=0.5)
         else:
-            plt.plot(percent_remaining, efficiencies, color=color)
+            plt.plot(percent_remaining, efficiencies, color=color, alpha=0.5)
 
     plt.xlabel("Percentage of Nodes Remaining")
     plt.ylabel("Normalized Efficiency")
@@ -695,10 +706,26 @@ def plot_multiple_efficiency_runs(results_dir, color='blue', title='Efficiency D
     plt.grid(True)
     plt.tight_layout()
     plt.gca().invert_xaxis()
-
     if legend:
         plt.legend()
+    plt.show()
 
+    # -------- SECOND PLOT: Mean ± Std with Data Points --------
+    all_curves = np.array(all_curves)
+    mean_eff = np.mean(all_curves, axis=0)
+    std_eff = np.std(all_curves, axis=0)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(common_x, mean_eff, color='black', linewidth=2, marker='o', markersize=4, label='Mean Efficiency')
+    plt.fill_between(common_x, mean_eff - std_eff, mean_eff + std_eff, color='gray', alpha=0.3, label='±1 SD')
+
+    plt.xlabel("Percentage of Nodes Remaining")
+    plt.ylabel("Normalized Efficiency")
+    plt.title(title + " (Mean ± Std Deviation)")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.gca().invert_xaxis()
+    plt.legend()
     plt.show()
 
 
