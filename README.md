@@ -65,3 +65,25 @@ P_space
 │   └── chicago.sqlite
 │
 ```
+
+## SQLite Files
+
+Download the SQLite database files required for the notebooks from the following link:
+
+[Download sqlite.zip](https://www.dropbox.com/scl/fi/hd4l1vxb43j10tglrl4x5/sqlite.zip?rlkey=htpb057n5ibygd0p1iyldn42z&st=2xrzsyo5&dl=0)
+
+### Setup Instructions
+
+1. Download the `sqlite.zip` file from the link above.  
+2. Extract the contents of the zip file.  
+3. Move the extracted folder into the `data` directory of your project.  
+
+After extraction, the structure should look like this:
+```bash
+project/
+├── data/
+│   ├── pkl/
+│   └── sqlite/
+│       ├── belgium.sqlite
+│       └── chicago.sqlite
+
