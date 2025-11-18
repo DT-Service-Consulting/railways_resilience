@@ -59,12 +59,8 @@ from gtfs_railways.functions.core import top_train_hubs_node_removal
 from gtfs_railways.functions.core import custom_node_removal
 from gtfs_railways.functions.core import random_edge_removal
 from gtfs_railways.functions.core import targeted_edge_removal
-from gtfs_railways.functions.core import betweenness_edge_removal_weighted
-from gtfs_railways.functions.core import betweenness_edge_removal_unweighted
 from gtfs_railways.functions.core import betweenness_node_removal_weighted_least
 from gtfs_railways.functions.core import betweenness_node_removal_unweighted_least
-from gtfs_railways.functions.core import betweenness_edge_removal_weighted_least
-from gtfs_railways.functions.core import betweenness_edge_removal_unweighted_least
 from gtfs_railways.functions.core import targeted_node_removal_least
 from gtfs_railways.functions.core import targeted_edge_removal_least
 from gtfs_railways.functions.core import random_node_removal_average
