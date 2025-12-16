@@ -150,6 +150,105 @@ def plot_nodes_highlight(G, nodes, back_map="OSM", MAPS_API_KEY=None):
 
     show(p)
 
+def plot_full_graph_with_highlighted_edges(G, edges_dict, back_map="OSM", MAPS_API_KEY=None):
+    """
+    Plots the entire L_graph as base (all edges + all nodes),
+    then overlays selected OD pairs in different colors depending on n_vehicles value.
+    
+    Args:
+        G (nx.Graph): Graph with lat/lon attributes.
+        edges_dict (dict): {n_veh_value: [(u, v, data), ...]}
+    """
+
+    # ----------------------
+    # Base map setup
+    # ----------------------
+    if back_map == "GMAPS":
+        first_node = next(iter(G.nodes(data=True)))
+        map_options = GMapOptions(
+            lat=float(first_node[1]["lat"]),
+            lng=float(first_node[1]["lon"]),
+            map_type="roadmap",
+            zoom=11,
+        )
+        p = gmap(MAPS_API_KEY, map_options)
+    else:
+        p = figure(
+            height=600, width=950,
+            toolbar_location="below",
+            tools="pan,wheel_zoom,box_zoom,reset,save"
+        )
+
+    # ----------------------
+    # Compute projected positions
+    # ----------------------
+    pos_dict = {}
+    transformer = Transformer.from_crs("epsg:4326", "epsg:3857", always_xy=True)
+
+    for node, d in G.nodes(data=True):
+        if back_map == "OSM":
+            x, y = transformer.transform(float(d["lon"]), float(d["lat"]))
+        else:
+            x, y = float(d["lon"]), float(d["lat"])
+        pos_dict[node] = (x, y)
+
+    # ----------------------
+    # Render entire L_graph as base (ALL edges, ALL nodes)
+    # ----------------------
+    base_graph = from_networkx(G, layout_function=pos_dict)
+
+    # Nodes style
+    base_graph.node_renderer.glyph = Circle(size=5, fill_color="gray", fill_alpha=0.5)
+
+    # Edges style
+    base_graph.edge_renderer.glyph = MultiLine(line_alpha=0.4, line_width=1.5, line_color="gray")
+
+    # Add base graph
+    p.renderers.append(base_graph)
+
+    # ----------------------
+    # Palette for highlighting
+    # ----------------------
+    palette = Category20[20] if len(edges_dict) > 10 else Category10[10]
+
+    # ----------------------
+    # Overlay highlighted OD edges
+    # ----------------------
+    for idx, (n_val, edges) in enumerate(edges_dict.items()):
+        color = palette[idx % len(palette)]
+        label = f"{n_val} vehicles"
+
+        for u, v, data in edges:
+            if u not in pos_dict or v not in pos_dict:
+                continue
+
+            x0, y0 = pos_dict[u]
+            x1, y1 = pos_dict[v]
+
+            # Highlight edge
+            p.line([x0, x1], [y0, y1],
+                   line_width=4, alpha=0.9, color=color,
+                   legend_label=label)
+
+            # Highlight nodes
+            p.circle([x0, x1], [y0, y1],
+                     size=10, alpha=1.0, color=color)
+
+    # ----------------------
+    # Hover + tiles
+    # ----------------------
+    hover = HoverTool(tooltips=[("Node", "@index")])
+    p.add_tools(hover)
+
+    if back_map == "OSM":
+        p.add_tile(get_provider(Vendors.CARTODBPOSITRON))
+
+    p.toolbar.active_scroll = p.select_one(WheelZoomTool)
+    p.legend.location = "top_left"
+    p.legend.click_policy = "hide"
+
+    show(p)
+
 def plot_efficiency_results(percent_remaining, efficiencies, title="Impact of Node Removal on Network Efficiency (Normalized)"):
     """
     Plots the change in normalized efficiency as nodes are removed.
