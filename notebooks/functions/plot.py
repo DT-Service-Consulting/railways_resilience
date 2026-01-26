@@ -828,7 +828,12 @@ def plot_multiple_efficiency_runs(results_dir, color='blue', title='Efficiency D
     plt.show()
 
 
-def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
+def plot_efficiency_comparison_single(
+    run_configs,
+    title="",
+    xlim=None,
+    save_path=None
+):
     """
     Plot efficiency curves for multiple runs on the same graph,
     shading the area above each curve and calculating the area value.
@@ -839,11 +844,11 @@ def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
         title (str): Plot title
         xlim (tuple, optional): (min_x, max_x) range for zoom (percent remaining).
                                 Tuple order does not matter; output is always descending.
+        save_path (Path or str, optional): If provided, saves the figure.
     """
     plt.figure(figsize=(10, 6))
     areas_above = {}
 
-    # Decide whether we're working with nodes or edges based on the first file
     filename0 = Path(run_configs[0]['fil']).name
     if "_nodes" in filename0:
         keyword = "_nodes"
@@ -856,12 +861,10 @@ def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
         df = pd.read_csv(cfg['fil'])
         efficiencies = df['normalized_efficiency'].tolist()
 
-        # Ensure starting point at 1.0
         if efficiencies[0] == 1.0:
             efficiencies = efficiencies[1:]
         efficiencies = [1.0] + efficiencies
 
-        # Extract total count from filename
         filename = Path(cfg['fil']).name
         if keyword not in filename:
             raise ValueError(f"Inconsistent file naming: expected {keyword} in {filename}")
@@ -871,12 +874,10 @@ def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
         num_removed = list(range(len(efficiencies)))
         percent_remaining = [100 * (total_count - n) / total_count for n in num_removed]
 
-        # Calculate area above curve
         gap_above = [1 - x for x in efficiencies]
         area_above = integrate.trapezoid(gap_above, dx=100 / total_count)
         areas_above[cfg['label']] = area_above
 
-        # Plot smooth line
         plt.plot(
             percent_remaining,
             efficiencies,
@@ -884,24 +885,25 @@ def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
             label=cfg['label']
         )
 
-        # Overlay scatter points
         plt.scatter(
             percent_remaining,
             efficiencies,
             color=cfg['color'],
-            s=15,        # point size
+            s=15,
             alpha=0.7
         )
 
-        # Shade area above curve
-        plt.fill_between(percent_remaining, efficiencies, 1.0, color=cfg['color'], alpha=0.3)
+        plt.fill_between(
+            percent_remaining,
+            efficiencies,
+            1.0,
+            color=cfg['color'],
+            alpha=0.3
+        )
 
-
-    # Apply zoom if specified
     if xlim:
         plt.xlim(xlim)
 
-    # Always ensure descending x-axis
     if plt.gca().get_xlim()[0] < plt.gca().get_xlim()[1]:
         plt.gca().invert_xaxis()
 
@@ -911,35 +913,47 @@ def plot_efficiency_comparison_single(run_configs, title="", xlim=None):
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
+
+    if save_path is not None:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
     plt.show()
 
-    # Print area results
     for label, area in areas_above.items():
         print(f"Area above curve ({label}): {area:.4f}")
 
     return areas_above
 
 
-def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison', xlim=None):
+def plot_efficiency_comparison_multi(
+    run_configs,
+    title="Efficiency Comparison",
+    xlim=None,
+    save_path_left=None,
+    save_path_right=None,
+    show=True
+):
     """
-    Plot efficiency curves from multiple run directories (countries) side-by-side:
-    Left plot: individual curves colored by group with legend.
-    Right plot: mean curve + shaded std deviation for each group.
+    Plot efficiency curves from multiple run directories (countries):
+    - Left: individual curves
+    - Right: mean + std deviation
     """
 
-    fig, axs = plt.subplots(1, 2, figsize=(16, 6))
-    ax1, ax2 = axs
+    # =========================
+    # LEFT FIGURE
+    # =========================
+    fig_left, ax1 = plt.subplots(figsize=(8, 6))
     legend_elements = []
     plotted_left = False
-    plotted_right = False
 
-    # --- LEFT PLOT: individual curves ---
     for config in run_configs:
-        directory = Path(config['dir'])
-        color = config['color']
-        label = config['label']
+        directory = Path(config["dir"])
+        color = config["color"]
+        label = config["label"]
 
-        csv_files = [f for f in directory.iterdir() if f.suffix == '.csv']
+        csv_files = [f for f in directory.iterdir() if f.suffix == ".csv"]
 
         for csv_file in csv_files:
             try:
@@ -953,21 +967,21 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
                     continue
 
                 df = pd.read_csv(csv_file)
-                if 'normalized_efficiency' not in df.columns:
+                if "normalized_efficiency" not in df.columns:
                     continue
 
-                efficiencies = df['normalized_efficiency'].tolist()
+                efficiencies = df["normalized_efficiency"].tolist()
                 if efficiencies[0] == 1.0:
                     efficiencies = efficiencies[1:]
                 efficiencies = [1.0] + efficiencies
 
-                num_removed = list(range(len(efficiencies)))
+                num_removed = range(len(efficiencies))
                 percent_remaining = [
                     100 * (total_elements - n) / total_elements
                     for n in num_removed
                 ]
 
-                ax1.plot(percent_remaining, efficiencies, color=color)
+                ax1.plot(percent_remaining, efficiencies, color=color, alpha=0.8)
                 plotted_left = True
 
             except Exception:
@@ -980,16 +994,27 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
     ax1.set_title("Individual Efficiency Curves")
     ax1.grid(True)
     ax1.invert_xaxis()
+
+    if xlim:
+        ax1.set_xlim(xlim)
+
     if plotted_left:
         ax1.legend(handles=legend_elements)
 
-    # --- RIGHT PLOT: mean curve + std deviation band ---
-    for config in run_configs:
-        directory = Path(config['dir'])
-        color = config['color']
-        label = config['label']
+    fig_left.tight_layout()
 
-        csv_files = [f for f in directory.iterdir() if f.suffix == '.csv']
+    # =========================
+    # RIGHT FIGURE
+    # =========================
+    fig_right, ax2 = plt.subplots(figsize=(8, 6))
+    plotted_right = False
+
+    for config in run_configs:
+        directory = Path(config["dir"])
+        color = config["color"]
+        label = config["label"]
+
+        csv_files = [f for f in directory.iterdir() if f.suffix == ".csv"]
         all_efficiencies = []
         all_percent_remaining = []
 
@@ -1005,15 +1030,15 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
                     continue
 
                 df = pd.read_csv(csv_file)
-                if 'normalized_efficiency' not in df.columns:
+                if "normalized_efficiency" not in df.columns:
                     continue
 
-                efficiencies = df['normalized_efficiency'].tolist()
+                efficiencies = df["normalized_efficiency"].tolist()
                 if efficiencies[0] == 1.0:
                     efficiencies = efficiencies[1:]
                 efficiencies = [1.0] + efficiencies
 
-                num_removed = list(range(len(efficiencies)))
+                num_removed = range(len(efficiencies))
                 percent_remaining = [
                     100 * (total_elements - n) / total_elements
                     for n in num_removed
@@ -1035,11 +1060,14 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
         mean_eff = eff_matrix.mean(axis=0)
         std_eff = eff_matrix.std(axis=0)
 
-        # plot mean line
         ax2.plot(pr, mean_eff, color=color, label=label)
-
-        # plot std deviation band
-        ax2.fill_between(pr, mean_eff - std_eff, mean_eff + std_eff, color=color, alpha=0.25)
+        ax2.fill_between(
+            pr,
+            mean_eff - std_eff,
+            mean_eff + std_eff,
+            color=color,
+            alpha=0.25
+        )
 
         plotted_right = True
 
@@ -1048,16 +1076,29 @@ def plot_efficiency_comparison_multi(run_configs, title='Efficiency Comparison',
     ax2.set_title("Average Efficiency with Std Deviation")
     ax2.grid(True)
     ax2.invert_xaxis()
+
+    if xlim:
+        ax2.set_xlim(xlim)
+
     if plotted_right:
         ax2.legend()
 
-    if xlim:
-        ax1.set_xlim(xlim)
-        ax2.set_xlim(xlim)
+    fig_right.tight_layout()
 
-    fig.suptitle(title)
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.show()
+    # =========================
+    # SAVE
+    # =========================
+    if save_path_left is not None:
+        fig_left.savefig(save_path_left, dpi=300, bbox_inches="tight")
+
+    if save_path_right is not None:
+        fig_right.savefig(save_path_right, dpi=300, bbox_inches="tight")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig_left)
+        plt.close(fig_right)
 
 
 def plot_average_efficiency_with_area(results_dir):
@@ -1205,3 +1246,93 @@ def plot_efficiency_with_node_labels_from_df(df, title="Network Efficiency over 
     print(f"Area above average efficiency line: {area_above:.4f}\n")
 
     return area_above
+
+def plot_efficiency_with_node_labels_overlay(
+    df1,
+    df2,
+    label1="Run 1",
+    label2="Run 2",
+    color1="black",
+    color2="orange",
+    title=None,
+    save_path=None
+):
+    """
+    Overlay two efficiency–node-removal plots using twin x-axes.
+
+    Args:
+        df1, df2 (pd.DataFrame): Must include
+            'normalized_efficiency' and 'removed_node_names'
+        label1, label2 (str): Legend labels
+        color1, color2 (str): Line colors
+        title (str): Plot title
+        save_path (str or Path, optional): Path to save the figure
+    """
+
+    # --- Extract data ---
+    eff1 = df1["normalized_efficiency"].tolist()
+    nodes1 = df1["removed_node_names"].tolist()
+
+    eff2 = df2["normalized_efficiency"].tolist()
+    nodes2 = df2["removed_node_names"].tolist()
+
+    # Prepend full graph
+    if eff1[0] != 1.0:
+        eff1 = [1.0] + eff1
+        nodes1 = [""] + nodes1
+
+    if eff2[0] != 1.0:
+        eff2 = [1.0] + eff2
+        nodes2 = [""] + nodes2
+
+    x1 = list(range(len(eff1)))
+    x2 = list(range(len(eff2)))
+
+    labels1 = ["Full Graph"] + nodes1[1:]
+    labels2 = ["Full Graph"] + nodes2[1:]
+
+    # --- Plot ---
+    fig, ax1 = plt.subplots(figsize=(14, 6))
+    ax2 = ax1.twiny()
+
+    ax1.plot(x1, eff1, color=color1, marker="o", label=label1)
+    ax1.fill_between(x1, eff1, 1.0, color=color1, alpha=0.25)
+
+    ax2.plot(x2, eff2, color=color2, marker="o", label=label2)
+    ax2.fill_between(x2, eff2, 1.0, color=color2, alpha=0.25)
+
+    # Bottom x axis (run 1)
+    ax1.set_xticks(x1)
+    ax1.set_xticklabels(labels1, rotation=45, ha="right")
+    ax1.set_xlabel(f"Removed Nodes ({label1})")
+
+    # Top x axis (run 2)
+    ax2.set_xticks(x2)
+    ax2.set_xticklabels(labels2, rotation=45, ha="left")
+    ax2.set_xlabel(f"Removed Nodes ({label2})")
+
+    ax1.set_ylabel("Normalized Efficiency")
+    ax1.grid(True)
+    ax1.set_title(title)
+
+    # Legend
+    lines1, labels1_ = ax1.get_legend_handles_labels()
+    lines2, labels2_ = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1_ + labels2_)
+
+    plt.tight_layout()
+
+    # --- Save ---
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    plt.show()
+
+    # --- Areas ---
+    area1 = integrate.trapezoid([1 - x for x in eff1], dx=1)
+    area2 = integrate.trapezoid([1 - x for x in eff2], dx=1)
+
+    print(f"Area above curve ({label1}): {area1:.4f}")
+    print(f"Area above curve ({label2}): {area2:.4f}")
+
+    return area1, area2
