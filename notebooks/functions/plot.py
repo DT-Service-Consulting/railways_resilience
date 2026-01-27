@@ -1295,6 +1295,8 @@ def plot_efficiency_with_node_labels_overlay(
     fig, ax1 = plt.subplots(figsize=(14, 6))
     ax2 = ax1.twiny()
 
+    ax1.set_ylim(0, 1)
+
     ax1.plot(x1, eff1, color=color1, marker="o", label=label1)
     ax1.fill_between(x1, eff1, 1.0, color=color1, alpha=0.25)
 
