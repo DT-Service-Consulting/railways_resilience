@@ -836,7 +836,9 @@ def plot_efficiency_comparison_single(
 ):
     """
     Plot efficiency curves for multiple runs on the same graph,
-    shading the area above each curve and calculating the area value.
+    shading the area above each curve and calculating two area values:
+    1. Area above the full curve over the entire 0-100% range
+    2. Area above the visible curve within the plotted x-range
 
     Args:
         run_configs (list of dict): Each dict must have keys:
@@ -845,9 +847,15 @@ def plot_efficiency_comparison_single(
         xlim (tuple, optional): (min_x, max_x) range for zoom (percent remaining).
                                 Tuple order does not matter; output is always descending.
         save_path (Path or str, optional): If provided, saves the figure.
+
+    Returns:
+        tuple:
+            areas_above_full (dict): area above each full curve
+            areas_above_plot (dict): area above each curve within plotted x-range
     """
     plt.figure(figsize=(10, 6))
-    areas_above = {}
+    areas_above_full = {}
+    areas_above_plot = {}
 
     filename0 = Path(run_configs[0]['fil']).name
     if "_nodes" in filename0:
@@ -875,8 +883,30 @@ def plot_efficiency_comparison_single(
         percent_remaining = [100 * (total_count - n) / total_count for n in num_removed]
 
         gap_above = [1 - x for x in efficiencies]
-        area_above = integrate.trapezoid(gap_above, dx=100 / total_count)
-        areas_above[cfg['label']] = area_above
+
+        # Area above curve for the full 0-100% graph
+        area_full = integrate.trapezoid(gap_above, dx=100 / total_count)
+        areas_above_full[cfg['label']] = area_full
+
+        # Area above curve for the plotted region only
+        if xlim is not None:
+            xmin, xmax = min(xlim), max(xlim)
+
+            zoom_x = []
+            zoom_gap = []
+            for x, g in zip(percent_remaining, gap_above):
+                if xmin <= x <= xmax:
+                    zoom_x.append(x)
+                    zoom_gap.append(g)
+
+            if len(zoom_x) > 1:
+                area_plot = abs(integrate.trapezoid(zoom_gap, zoom_x))
+            else:
+                area_plot = 0.0
+        else:
+            area_plot = area_full
+
+        areas_above_plot[cfg['label']] = area_plot
 
         plt.plot(
             percent_remaining,
@@ -921,10 +951,15 @@ def plot_efficiency_comparison_single(
 
     plt.show()
 
-    for label, area in areas_above.items():
-        print(f"Area above curve ({label}): {area:.4f}")
+    print("\nArea above curve (full graph):")
+    for label, area in areas_above_full.items():
+        print(f"{label}: {area:.4f}")
 
-    return areas_above
+    print("\nArea above curve (plot window):")
+    for label, area in areas_above_plot.items():
+        print(f"{label}: {area:.4f}")
+
+    return areas_above_full, areas_above_plot
 
 
 def plot_efficiency_comparison_multi(
