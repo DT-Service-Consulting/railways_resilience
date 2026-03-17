@@ -968,13 +968,109 @@ def plot_efficiency_comparison_multi(
     xlim=None,
     save_path_left=None,
     save_path_right=None,
-    show=True
+    show=True,
+    show_titles=True
 ):
     """
     Plot efficiency curves from multiple run directories (countries):
     - Left: individual curves
     - Right: mean + std deviation
+
+    Also computes average area above the curve for each group
+    (based on individual simulations, then averaged):
+    1. Over the full 0-100% range
+    2. Over the visible plot window (xlim), if provided
+
+    Args:
+        run_configs (list of dict): Each dict must contain:
+            'dir'   : directory containing CSV files
+            'color' : line color
+            'label' : legend label
+        title (str): Base title for the plots
+        xlim (tuple, optional): x-axis window, e.g. (100, 90)
+        save_path_left (Path or str, optional): Save path for left figure
+        save_path_right (Path or str, optional): Save path for right figure
+        show (bool): Whether to display the figures
+        show_titles (bool): Whether to display figure titles
+
+    Returns:
+        tuple:
+            avg_areas_full (dict): average area above curve over full range
+            avg_areas_plot (dict): average area above curve over plotted window
     """
+
+    def load_curve_from_csv(csv_file):
+        """
+        Read one CSV and reconstruct:
+        - efficiencies
+        - percent_remaining
+        """
+        filename = csv_file.name
+
+        if "_nodes" in filename:
+            total_elements = int(filename.split("_nodes")[-1].replace(".csv", ""))
+        elif "_edges" in filename:
+            total_elements = int(filename.split("_edges")[-1].replace(".csv", ""))
+        else:
+            return None, None
+
+        df = pd.read_csv(csv_file)
+        if "normalized_efficiency" not in df.columns:
+            return None, None
+
+        efficiencies = df["normalized_efficiency"].tolist()
+
+        if len(efficiencies) == 0:
+            return None, None
+
+        if efficiencies[0] == 1.0:
+            efficiencies = efficiencies[1:]
+        efficiencies = [1.0] + efficiencies
+
+        num_removed = list(range(len(efficiencies)))
+        percent_remaining = [
+            100 * (total_elements - n) / total_elements
+            for n in num_removed
+        ]
+
+        return percent_remaining, efficiencies
+
+    def compute_area_above_curve(percent_remaining, efficiencies, xlim=None):
+        """
+        Compute:
+        - full area above curve over 0-100%
+        - area above curve within xlim window
+
+        Returns:
+            area_full, area_plot
+        """
+        gap_above = [1 - e for e in efficiencies]
+
+        # Full area: use actual x-values for robustness
+        area_full = abs(integrate.trapezoid(gap_above, percent_remaining))
+
+        if xlim is not None:
+            xmin, xmax = min(xlim), max(xlim)
+
+            zoom_x = []
+            zoom_gap = []
+
+            for x, g in zip(percent_remaining, gap_above):
+                if xmin <= x <= xmax:
+                    zoom_x.append(x)
+                    zoom_gap.append(g)
+
+            if len(zoom_x) > 1:
+                area_plot = abs(integrate.trapezoid(zoom_gap, zoom_x))
+            else:
+                area_plot = 0.0
+        else:
+            area_plot = area_full
+
+        return area_full, area_plot
+
+    avg_areas_full = {}
+    avg_areas_plot = {}
 
     # =========================
     # LEFT FIGURE
@@ -988,33 +1084,13 @@ def plot_efficiency_comparison_multi(
         color = config["color"]
         label = config["label"]
 
-        csv_files = [f for f in directory.iterdir() if f.suffix == ".csv"]
+        csv_files = sorted([f for f in directory.iterdir() if f.suffix == ".csv"])
 
         for csv_file in csv_files:
             try:
-                filename = csv_file.name
-
-                if "_nodes" in filename:
-                    total_elements = int(filename.split("_nodes")[-1].replace(".csv", ""))
-                elif "_edges" in filename:
-                    total_elements = int(filename.split("_edges")[-1].replace(".csv", ""))
-                else:
+                percent_remaining, efficiencies = load_curve_from_csv(csv_file)
+                if percent_remaining is None:
                     continue
-
-                df = pd.read_csv(csv_file)
-                if "normalized_efficiency" not in df.columns:
-                    continue
-
-                efficiencies = df["normalized_efficiency"].tolist()
-                if efficiencies[0] == 1.0:
-                    efficiencies = efficiencies[1:]
-                efficiencies = [1.0] + efficiencies
-
-                num_removed = range(len(efficiencies))
-                percent_remaining = [
-                    100 * (total_elements - n) / total_elements
-                    for n in num_removed
-                ]
 
                 ax1.plot(percent_remaining, efficiencies, color=color, alpha=0.8)
                 plotted_left = True
@@ -1026,7 +1102,8 @@ def plot_efficiency_comparison_multi(
 
     ax1.set_xlabel("Percentage Remaining")
     ax1.set_ylabel("Normalized Efficiency")
-    ax1.set_title("Individual Efficiency Curves")
+    if show_titles:
+        ax1.set_title(f"{title} - Individual Efficiency Curves")
     ax1.grid(True)
     ax1.invert_xaxis()
 
@@ -1049,38 +1126,30 @@ def plot_efficiency_comparison_multi(
         color = config["color"]
         label = config["label"]
 
-        csv_files = [f for f in directory.iterdir() if f.suffix == ".csv"]
+        csv_files = sorted([f for f in directory.iterdir() if f.suffix == ".csv"])
         all_efficiencies = []
         all_percent_remaining = []
 
+        area_full_runs = []
+        area_plot_runs = []
+
         for csv_file in csv_files:
             try:
-                filename = csv_file.name
-
-                if "_nodes" in filename:
-                    total_elements = int(filename.split("_nodes")[-1].replace(".csv", ""))
-                elif "_edges" in filename:
-                    total_elements = int(filename.split("_edges")[-1].replace(".csv", ""))
-                else:
+                percent_remaining, efficiencies = load_curve_from_csv(csv_file)
+                if percent_remaining is None:
                     continue
-
-                df = pd.read_csv(csv_file)
-                if "normalized_efficiency" not in df.columns:
-                    continue
-
-                efficiencies = df["normalized_efficiency"].tolist()
-                if efficiencies[0] == 1.0:
-                    efficiencies = efficiencies[1:]
-                efficiencies = [1.0] + efficiencies
-
-                num_removed = range(len(efficiencies))
-                percent_remaining = [
-                    100 * (total_elements - n) / total_elements
-                    for n in num_removed
-                ]
 
                 all_efficiencies.append(efficiencies)
                 all_percent_remaining.append(percent_remaining)
+
+                # Area above curve for this individual simulation
+                area_full, area_plot = compute_area_above_curve(
+                    percent_remaining,
+                    efficiencies,
+                    xlim=xlim
+                )
+                area_full_runs.append(area_full)
+                area_plot_runs.append(area_plot)
 
             except Exception:
                 continue
@@ -1088,6 +1157,11 @@ def plot_efficiency_comparison_multi(
         if not all_efficiencies:
             continue
 
+        # Average areas across simulations
+        avg_areas_full[label] = float(np.mean(area_full_runs)) if area_full_runs else 0.0
+        avg_areas_plot[label] = float(np.mean(area_plot_runs)) if area_plot_runs else 0.0
+
+        # Build mean/std curve for plotting
         min_len = min(len(e) for e in all_efficiencies)
         eff_matrix = np.array([e[:min_len] for e in all_efficiencies])
         pr = np.array(all_percent_remaining[0][:min_len])
@@ -1108,7 +1182,8 @@ def plot_efficiency_comparison_multi(
 
     ax2.set_xlabel("Percentage Remaining")
     ax2.set_ylabel("Normalized Efficiency")
-    ax2.set_title("Average Efficiency with Std Deviation")
+    if show_titles:
+        ax2.set_title(f"{title} - Average Efficiency with Std Deviation")
     ax2.grid(True)
     ax2.invert_xaxis()
 
@@ -1124,9 +1199,13 @@ def plot_efficiency_comparison_multi(
     # SAVE
     # =========================
     if save_path_left is not None:
+        save_path_left = Path(save_path_left)
+        save_path_left.parent.mkdir(parents=True, exist_ok=True)
         fig_left.savefig(save_path_left, dpi=300, bbox_inches="tight")
 
     if save_path_right is not None:
+        save_path_right = Path(save_path_right)
+        save_path_right.parent.mkdir(parents=True, exist_ok=True)
         fig_right.savefig(save_path_right, dpi=300, bbox_inches="tight")
 
     if show:
@@ -1134,6 +1213,16 @@ def plot_efficiency_comparison_multi(
     else:
         plt.close(fig_left)
         plt.close(fig_right)
+
+    print("\nAverage area above curve (full graph):")
+    for label, area in avg_areas_full.items():
+        print(f"{label}: {area:.4f}")
+
+    print("\nAverage area above curve (plot window):")
+    for label, area in avg_areas_plot.items():
+        print(f"{label}: {area:.4f}")
+
+    return avg_areas_full, avg_areas_plot
 
 
 def plot_average_efficiency_with_area(results_dir):
