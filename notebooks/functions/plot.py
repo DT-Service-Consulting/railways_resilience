@@ -150,6 +150,108 @@ def plot_nodes_highlight(G, nodes, back_map="OSM", MAPS_API_KEY=None):
 
     show(p)
 
+def plot_edges_highlight(G, edges, back_map="OSM", MAPS_API_KEY=None, name_attr="name"):
+    """
+    Plot the graph with given edges highlighted in different colors and
+    print edge names after the plot.
+
+    Args:
+        G (nx.Graph): Graph with 'lat' and 'lon' node attributes.
+        edges (list): List of edge tuples (u, v) to highlight.
+        back_map (str): "OSM", "GMAPS", or None.
+        MAPS_API_KEY (str, optional): Required if back_map == "GMAPS".
+        name_attr (str): Node attribute to use as the node name.
+    """
+
+    if not isinstance(edges, (list, tuple, set)):
+        edges = [edges]
+
+    if back_map == "GMAPS":
+        first_node = next(iter(G.nodes(data=True)))
+        map_options = GMapOptions(
+            lat=first_node[1]["lat"],
+            lng=first_node[1]["lon"],
+            map_type="roadmap",
+            zoom=11
+        )
+        p = gmap(MAPS_API_KEY, map_options)
+    else:
+        p = figure(
+            height=600,
+            width=950,
+            toolbar_location="below",
+            tools="pan,wheel_zoom,box_zoom,reset,save"
+        )
+
+    pos_dict = {}
+    transformer = Transformer.from_crs("epsg:4326", "epsg:3857", always_xy=True)
+
+    for node_id, d in G.nodes(data=True):
+        if back_map == "OSM":
+            x, y = transformer.transform(float(d["lon"]), float(d["lat"]))
+        else:
+            x, y = float(d["lon"]), float(d["lat"])
+        pos_dict[node_id] = (x, y)
+
+    graph = from_networkx(G, layout_function=pos_dict)
+    graph.node_renderer.glyph = Circle(size=6, fill_color="gray")
+    graph.edge_renderer.glyph = MultiLine(line_width=2, line_alpha=0.3)
+
+    p.renderers.append(graph)
+
+    palette = Category20[20] if len(edges) > 10 else Category10[10]
+    printed_edges = []
+
+    for idx, edge in enumerate(edges):
+        if len(edge) < 2:
+            print(f"Invalid edge format: {edge}")
+            continue
+
+        u, v = edge[0], edge[1]
+
+        # For undirected graphs, accept reversed order too
+        edge_exists = G.has_edge(u, v) or (not G.is_directed() and G.has_edge(v, u))
+
+        if u in pos_dict and v in pos_dict and edge_exists:
+            color = palette[idx % len(palette)]
+
+            x = [pos_dict[u][0], pos_dict[v][0]]
+            y = [pos_dict[u][1], pos_dict[v][1]]
+
+            p.line(
+                x, y,
+                line_width=5,
+                color=color,
+                alpha=0.9,
+                legend_label=f"{u}-{v}"
+            )
+
+            u_name = G.nodes[u].get(name_attr, "Unknown")
+            v_name = G.nodes[v].get(name_attr, "Unknown")
+            printed_edges.append(f"({u_name})({u}) to ({v_name})({v})")
+        else:
+            print(f"Edge ({u}, {v}) not found in graph")
+
+    node_hover_tool = HoverTool(
+        tooltips=[("index", "@index"), ("name", "@name")],
+        renderers=[graph.node_renderer]
+    )
+    p.add_tools(node_hover_tool)
+
+    p.toolbar.active_scroll = p.select_one(WheelZoomTool)
+
+    if back_map == "OSM":
+        p.add_tile(get_provider(Vendors.CARTODBPOSITRON))
+
+    p.legend.location = "top_left"
+    p.legend.click_policy = "hide"
+
+    show(p)
+
+    print("\nHighlighted edges:")
+    for edge_str in printed_edges:
+        print(edge_str)
+
 def plot_full_graph_with_highlighted_edges(G, edges_dict, back_map="OSM", MAPS_API_KEY=None):
     """
     Plots the entire L_graph as base (all edges + all nodes),
