@@ -82,39 +82,48 @@ def plot_graph(G, space="L", back_map=False, MAPS_API_KEY=None, color_by="", edg
     else:
         show(p)
 
-def plot_nodes_highlight(G, nodes, back_map="OSM", MAPS_API_KEY=None):
+def plot_nodes_highlight(G, nodes, back_map="OSM", MAPS_API_KEY=None, name_attr="name"):
     """
-    Plot the graph with given nodes highlighted in different colors.
+    Plot the graph with given nodes highlighted in different colors and
+    print the highlighted node names after the plot.
 
     Args:
         G (nx.Graph): Graph with 'lat' and 'lon' node attributes.
         nodes (list): Node IDs to highlight.
         back_map (str): "OSM", "GMAPS", or None.
         MAPS_API_KEY (str, optional): Required if back_map == "GMAPS".
+        name_attr (str): Node attribute to use as the node name.
     """
     if not isinstance(nodes, (list, tuple, set)):
         nodes = [nodes]
 
     if back_map == "GMAPS":
         first_node = next(iter(G.nodes(data=True)))
-        map_options = GMapOptions(lat=first_node[1]["lat"],
-                                  lng=first_node[1]["lon"],
-                                  map_type="roadmap",
-                                  zoom=11)
+        map_options = GMapOptions(
+            lat=first_node[1]["lat"],
+            lng=first_node[1]["lon"],
+            map_type="roadmap",
+            zoom=11
+        )
         p = gmap(MAPS_API_KEY, map_options)
     else:
-        p = figure(height=600, width=950, toolbar_location="below",
-                   tools="pan, wheel_zoom, box_zoom, reset, save")
+        p = figure(
+            height=600,
+            width=950,
+            toolbar_location="below",
+            tools="pan,wheel_zoom,box_zoom,reset,save"
+        )
 
     # Build node position dictionary
     pos_dict = {}
     transformer = Transformer.from_crs("epsg:4326", "epsg:3857", always_xy=True)
-    for i, d in G.nodes(data=True):
+
+    for node_id, d in G.nodes(data=True):
         if back_map == "OSM":
-            x2, y2 = transformer.transform(float(d["lon"]), float(d["lat"]))
+            x, y = transformer.transform(float(d["lon"]), float(d["lat"]))
         else:
-            x2, y2 = float(d["lon"]), float(d["lat"])
-        pos_dict[i] = (x2, y2)
+            x, y = float(d["lon"]), float(d["lat"])
+        pos_dict[node_id] = (x, y)
 
     graph = from_networkx(G, layout_function=pos_dict)
 
@@ -125,18 +134,25 @@ def plot_nodes_highlight(G, nodes, back_map="OSM", MAPS_API_KEY=None):
     # Choose color palette
     palette = Category20[20] if len(nodes) > 10 else Category10[10]
 
+    printed_nodes = []
+
     # Highlight each requested node
     for idx, node in enumerate(nodes):
         if node in pos_dict:
             color = palette[idx % len(palette)]
             x, y = [pos_dict[node][0]], [pos_dict[node][1]]
             p.circle(x=x, y=y, size=15, color=color, legend_label=f"Node {node}")
+
+            node_name = G.nodes[node].get(name_attr, "Unknown")
+            printed_nodes.append(f"({node_name})({node})")
         else:
             print(f"Node {node} not found in graph")
 
     # Add hover tools
-    node_hover_tool = HoverTool(tooltips=[("index", "@index"), ("name", "@name")],
-                                renderers=[graph.node_renderer])
+    node_hover_tool = HoverTool(
+        tooltips=[("index", "@index"), ("name", "@name")],
+        renderers=[graph.node_renderer]
+    )
     p.add_tools(node_hover_tool)
 
     p.toolbar.active_scroll = p.select_one(WheelZoomTool)
@@ -145,10 +161,15 @@ def plot_nodes_highlight(G, nodes, back_map="OSM", MAPS_API_KEY=None):
     if back_map == "OSM":
         p.add_tile(get_provider(Vendors.CARTODBPOSITRON))
 
-    p.legend.location = "top_left"
-    p.legend.click_policy = "hide"
+    if printed_nodes:
+        p.legend.location = "top_left"
+        p.legend.click_policy = "hide"
 
     show(p)
+
+    print("\nHighlighted nodes:")
+    for node_str in printed_nodes:
+        print(node_str)
 
 def plot_edges_highlight(G, edges, back_map="OSM", MAPS_API_KEY=None, name_attr="name"):
     """
@@ -1038,6 +1059,9 @@ def plot_efficiency_comparison_single(
 
     if plt.gca().get_xlim()[0] < plt.gca().get_xlim()[1]:
         plt.gca().invert_xaxis()
+
+    plt.ylim(-0.02, 1.02)
+    plt.yticks(np.linspace(0, 1, 6))
 
     plt.xlabel(f"Percentage of {keyword.strip('_').capitalize()} Remaining")
     plt.ylabel("Normalized Efficiency")
