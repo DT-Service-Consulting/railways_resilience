@@ -1,4 +1,5 @@
-step,removed_edge,normalized_efficiency,percent_remaining,removal_time_seconds
+step,removed_node,normalized_efficiency,percent_remaining,removal_time_seconds
+0,,1.0,100.0,0.0
 1,"(27, 26)",0.9615,99.91803278688523,25293.7208
 2,"(26, 27)",0.9275,99.8360655737705,25748.5606
 3,"(40, 39)",0.904,99.75409836065576,25566.5216
