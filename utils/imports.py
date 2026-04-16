@@ -92,6 +92,7 @@ from notebooks.functions.plot import plot_efficiency_vs_custom_nodes
 from notebooks.functions.plot import plot_full_graph_with_highlighted_edges
 from notebooks.functions.plot import plot_efficiency_with_node_labels_overlay
 from notebooks.functions.plot import plot_edges_highlight
+from notebooks.functions.plot import plot_efficiency_comparison_with_named_inset
 
 from gtfs_railways.functions.v0 import (
     get_all_GTC as get_all_GTC_v0,

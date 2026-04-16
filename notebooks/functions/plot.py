@@ -6,6 +6,8 @@ import pandas as pd # type: ignore
 from scipy import integrate # type: ignore
 from pathlib import Path
 import re
+import textwrap
+import ast
 
 from bokeh.plotting import figure, show, from_networkx # type: ignore
 from bokeh.models import Circle, MultiLine, HoverTool, LinearColorMapper, ColorBar, WheelZoomTool # type: ignore
@@ -1588,3 +1590,218 @@ def plot_efficiency_with_node_labels_overlay(
     print(f"Area above curve ({label2}): {area2:.4f}")
 
     return area1, area2
+
+def plot_efficiency_comparison_with_named_inset(
+    run_configs,
+    title="",
+    xlim=None,
+    save_path=None,
+    inset_graphs=None,
+    inset_n=5,
+    inset_panel_position=(0.35, 0.30, 0.63, 0.69),
+    inset_plot_rect=(0.08, 0.25, 0.88, 0.50),
+    inset_title="First Removed Elements",
+    main_legend_loc="lower left",
+    inset_legend=False,
+    wrap_width=14,
+):
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    loaded_dfs = []
+
+    filename0 = Path(run_configs[0]["fil"]).name
+    if "_nodes" in filename0:
+        keyword = "_nodes"
+        removal_kind = "node"
+    elif "_edges" in filename0:
+        keyword = "_edges"
+        removal_kind = "edge"
+    else:
+        raise ValueError("Could not infer whether this is a node or edge removal file.")
+
+    # -----------------------------
+    # Helpers
+    # -----------------------------
+    def parse_node_id(val):
+        if pd.isna(val) or val == "":
+            return None
+        try:
+            return int(float(val))
+        except Exception:
+            return None
+
+    def parse_edge(val):
+        if pd.isna(val) or val == "":
+            return None
+        try:
+            parsed = ast.literal_eval(str(val))
+            if isinstance(parsed, tuple) and len(parsed) == 2:
+                u, v = parsed
+                return int(u), int(v)
+        except Exception:
+            pass
+        return None
+
+    def node_name_lookup(graph, node_id):
+        if node_id is not None and node_id in graph.nodes:
+            return graph.nodes[node_id].get("name", str(node_id))
+        return str(node_id)
+
+    def edge_name_lookup(graph, edge_tuple):
+        if edge_tuple is None:
+            return ""
+
+        u, v = edge_tuple
+        u_name = node_name_lookup(graph, u)
+        v_name = node_name_lookup(graph, v)
+
+        if graph.has_edge(u, v):
+            edge_data = graph.get_edge_data(u, v)
+            if isinstance(edge_data, dict):
+                edge_name = edge_data.get("name")
+                if edge_name:
+                    return str(edge_name)
+
+        return f"{u_name} - {v_name}"
+
+    def format_station_label(name, max_chars=14):
+        if not name:
+            return ""
+
+        name = str(name).strip()
+
+        if name.lower() == "full graph":
+            return "Full\nGraph"
+
+        return textwrap.fill(name, width=max_chars, break_long_words=False, break_on_hyphens=True)
+
+    def get_removed_labels(df, graph, kind, n):
+        raw_vals = df["removed_node"].tolist()[: n + 1]
+
+        if kind == "node":
+            parsed = [parse_node_id(x) for x in raw_vals]
+            labels = ["Full Graph"] + [node_name_lookup(graph, x) for x in parsed[1:]]
+        else:
+            parsed = [parse_edge(x) for x in raw_vals]
+            labels = ["Full Graph"] + [edge_name_lookup(graph, x) for x in parsed[1:]]
+
+        return [format_station_label(x, max_chars=wrap_width) for x in labels]
+
+    # -----------------------------
+    # Main plot
+    # -----------------------------
+    for cfg in run_configs:
+        df = pd.read_csv(cfg["fil"])
+        loaded_dfs.append(df)
+
+        efficiencies = df["normalized_efficiency"].tolist()
+        if efficiencies and efficiencies[0] == 1.0:
+            efficiencies = efficiencies[1:]
+        efficiencies = [1.0] + efficiencies
+
+        total_count = int(Path(cfg["fil"]).name.split(keyword)[-1].replace(".csv", ""))
+
+        num_removed = list(range(len(efficiencies)))
+        percent_remaining = [100 * (total_count - n) / total_count for n in num_removed]
+
+        ax.plot(
+            percent_remaining,
+            efficiencies,
+            color=cfg["color"],
+            label=cfg["label"],
+            linewidth=1.8,
+        )
+        ax.scatter(
+            percent_remaining,
+            efficiencies,
+            color=cfg["color"],
+            s=15,
+            alpha=0.7,
+        )
+        ax.fill_between(
+            percent_remaining,
+            efficiencies,
+            1.0,
+            color=cfg["color"],
+            alpha=0.3,
+        )
+
+    if xlim:
+        ax.set_xlim(xlim)
+    if ax.get_xlim()[0] < ax.get_xlim()[1]:
+        ax.invert_xaxis()
+
+    xlabel = "Percentage of Nodes Remaining" if removal_kind == "node" else "Percentage of Edges Remaining"
+
+    ax.set_yticks(np.linspace(0, 1, 6))
+    ax.set_ylim(-0.02, 1.02)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Normalized Efficiency")
+    ax.set_title(title)
+    ax.tick_params(axis="both")
+    ax.grid(True, alpha=0.6)
+    ax.legend(loc=main_legend_loc)
+
+    # -----------------------------
+    # Inset
+    # -----------------------------
+    if inset_graphs is not None:
+        df1, df2 = loaded_dfs
+        g1, g2 = inset_graphs
+
+        eff1 = df1["normalized_efficiency"].tolist()[: inset_n + 1]
+        eff2 = df2["normalized_efficiency"].tolist()[: inset_n + 1]
+
+        labels1 = get_removed_labels(df1, g1, removal_kind, inset_n)
+        labels2 = get_removed_labels(df2, g2, removal_kind, inset_n)
+
+        x1 = list(range(len(eff1)))
+        x2 = list(range(len(eff2)))
+
+        panel = ax.inset_axes(inset_panel_position)
+        panel.set_facecolor("white")
+        panel.set_xticks([])
+        panel.set_yticks([])
+
+        for spine in panel.spines.values():
+            spine.set_visible(True)
+            spine.set_linewidth(1.0)
+
+        panel.text(0.5, 0.99, inset_title, ha="center", va="top", fontsize=9)
+
+        if removal_kind == "node":
+            panel.text(0.5, 0.93, "Removed Nodes (Netherlands)", ha="center", fontsize=8)
+            panel.text(0.5, 0.05, "Removed Nodes (Belgium)", ha="center", fontsize=8)
+        else:
+            panel.text(0.5, 0.93, "Removed Edges (Netherlands)", ha="center", fontsize=8)
+            panel.text(0.5, 0.03, "Removed Edges (Belgium)", ha="center", fontsize=8)
+
+        panel.text(0.01, 0.5, "Normalized Efficiency", rotation=90, va="center", fontsize=8)
+
+        axins = panel.inset_axes(inset_plot_rect)
+        axins_top = axins.twiny()
+
+        axins.set_ylim(0.0, 1.0)
+        axins.set_yticks(np.linspace(0, 1, 6))
+        axins_top.set_ylim(0.0, 1.0)
+
+        axins.plot(x1, eff1, color="black", marker="o", markersize=4)
+        axins_top.plot(x2, eff2, color="#FF5A00", marker="o", markersize=4)
+
+        axins.set_xticks(x1)
+        axins.set_xticklabels(labels1, fontsize=7, rotation=0, ha="center")
+
+        axins_top.set_xticks(x2)
+        axins_top.set_xticklabels(labels2, fontsize=7, rotation=0, ha="center")
+
+        axins.tick_params(axis="x", pad=2)
+        axins_top.tick_params(axis="x", pad=6)
+        axins.tick_params(axis="y", labelsize=8)
+        axins.grid(True, alpha=0.3)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    plt.show()
