@@ -1510,16 +1510,12 @@ def plot_efficiency_with_node_labels_overlay(
     save_path=None
 ):
     """
-    Overlay two efficiency–node-removal plots using twin x-axes.
-
-    Args:
-        df1, df2 (pd.DataFrame): Must include
-            'normalized_efficiency' and 'removed_node_names'
-        label1, label2 (str): Legend labels
-        color1, color2 (str): Line colors
-        title (str): Plot title
-        save_path (str or Path, optional): Path to save the figure
+    Overlay two efficiency–node-removal plots using twin x-axes
+    with improved font sizes for publication-quality visuals.
     """
+
+    import matplotlib.pyplot as plt
+    from scipy import integrate
 
     # --- Extract data ---
     eff1 = df1["normalized_efficiency"].tolist()
@@ -1543,6 +1539,16 @@ def plot_efficiency_with_node_labels_overlay(
     labels1 = ["Full Graph"] + nodes1[1:]
     labels2 = ["Full Graph"] + nodes2[1:]
 
+    # --- Global font settings (clean + consistent) ---
+    plt.rcParams.update({
+        "font.size": 12,
+        "axes.titlesize": 18,
+        "axes.labelsize": 15,
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12,
+        "legend.fontsize": 13
+    })
+
     # --- Plot ---
     fig, ax1 = plt.subplots(figsize=(14, 6))
     ax2 = ax1.twiny()
@@ -1565,14 +1571,20 @@ def plot_efficiency_with_node_labels_overlay(
     ax2.set_xticklabels(labels2, rotation=45, ha="left")
     ax2.set_xlabel(f"Removed Nodes ({label2})")
 
+    # Y axis
     ax1.set_ylabel("Normalized Efficiency")
+
+    # Title
+    if title:
+        ax1.set_title(title)
+
+    # Grid
     ax1.grid(True)
-    ax1.set_title(title)
 
     # Legend
     lines1, labels1_ = ax1.get_legend_handles_labels()
     lines2, labels2_ = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1_ + labels2_)
+    ax1.legend(lines1 + lines2, labels1_ + labels2_, loc="best")
 
     plt.tight_layout()
 
