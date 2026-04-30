@@ -1100,39 +1100,27 @@ def plot_efficiency_comparison_multi(
     show_titles=True
 ):
     """
-    Plot efficiency curves from multiple run directories (countries):
-    - Left: individual curves
-    - Right: mean + std deviation
-
-    Also computes average area above the curve for each group
-    (based on individual simulations, then averaged):
-    1. Over the full 0-100% range
-    2. Over the visible plot window (xlim), if provided
-
-    Args:
-        run_configs (list of dict): Each dict must contain:
-            'dir'   : directory containing CSV files
-            'color' : line color
-            'label' : legend label
-        title (str): Base title for the plots
-        xlim (tuple, optional): x-axis window, e.g. (100, 90)
-        save_path_left (Path or str, optional): Save path for left figure
-        save_path_right (Path or str, optional): Save path for right figure
-        show (bool): Whether to display the figures
-        show_titles (bool): Whether to display figure titles
-
-    Returns:
-        tuple:
-            avg_areas_full (dict): average area above curve over full range
-            avg_areas_plot (dict): average area above curve over plotted window
+    Same as before, but with improved font sizes for readability and publication.
     """
 
+    import matplotlib.pyplot as plt
+    from scipy import integrate
+    from pathlib import Path
+    import numpy as np
+    import pandas as pd
+    from matplotlib.lines import Line2D
+
+    # --- Global font settings ---
+    plt.rcParams.update({
+        "font.size": 12,
+        "axes.titlesize": 18,
+        "axes.labelsize": 15,
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12,
+        "legend.fontsize": 13
+    })
+
     def load_curve_from_csv(csv_file):
-        """
-        Read one CSV and reconstruct:
-        - efficiencies
-        - percent_remaining
-        """
         filename = csv_file.name
 
         if "_nodes" in filename:
@@ -1164,17 +1152,8 @@ def plot_efficiency_comparison_multi(
         return percent_remaining, efficiencies
 
     def compute_area_above_curve(percent_remaining, efficiencies, xlim=None):
-        """
-        Compute:
-        - full area above curve over 0-100%
-        - area above curve within xlim window
-
-        Returns:
-            area_full, area_plot
-        """
         gap_above = [1 - e for e in efficiencies]
 
-        # Full area: use actual x-values for robustness
         area_full = abs(integrate.trapezoid(gap_above, percent_remaining))
 
         if xlim is not None:
@@ -1228,10 +1207,13 @@ def plot_efficiency_comparison_multi(
 
         legend_elements.append(Line2D([0], [0], color=color, lw=2, label=label))
 
-    ax1.set_xlabel("Percentage Remaining")
-    ax1.set_ylabel("Normalized Efficiency")
+    ax1.set_xlabel("Percentage Remaining", fontsize=15)
+    ax1.set_ylabel("Normalized Efficiency", fontsize=15)
+    ax1.tick_params(axis='both', labelsize=12)
+
     if show_titles:
-        ax1.set_title(f"{title} - Individual Efficiency Curves")
+        ax1.set_title(f"{title} - Individual Efficiency Curves", fontsize=18)
+
     ax1.grid(True)
     ax1.invert_xaxis()
 
@@ -1239,7 +1221,7 @@ def plot_efficiency_comparison_multi(
         ax1.set_xlim(xlim)
 
     if plotted_left:
-        ax1.legend(handles=legend_elements)
+        ax1.legend(handles=legend_elements, fontsize=13)
 
     fig_left.tight_layout()
 
@@ -1270,7 +1252,6 @@ def plot_efficiency_comparison_multi(
                 all_efficiencies.append(efficiencies)
                 all_percent_remaining.append(percent_remaining)
 
-                # Area above curve for this individual simulation
                 area_full, area_plot = compute_area_above_curve(
                     percent_remaining,
                     efficiencies,
@@ -1285,11 +1266,9 @@ def plot_efficiency_comparison_multi(
         if not all_efficiencies:
             continue
 
-        # Average areas across simulations
         avg_areas_full[label] = float(np.mean(area_full_runs)) if area_full_runs else 0.0
         avg_areas_plot[label] = float(np.mean(area_plot_runs)) if area_plot_runs else 0.0
 
-        # Build mean/std curve for plotting
         min_len = min(len(e) for e in all_efficiencies)
         eff_matrix = np.array([e[:min_len] for e in all_efficiencies])
         pr = np.array(all_percent_remaining[0][:min_len])
@@ -1308,10 +1287,13 @@ def plot_efficiency_comparison_multi(
 
         plotted_right = True
 
-    ax2.set_xlabel("Percentage Remaining")
-    ax2.set_ylabel("Normalized Efficiency")
+    ax2.set_xlabel("Percentage Remaining", fontsize=15)
+    ax2.set_ylabel("Normalized Efficiency", fontsize=15)
+    ax2.tick_params(axis='both', labelsize=12)
+
     if show_titles:
-        ax2.set_title(f"{title} - Average Efficiency with Std Deviation")
+        ax2.set_title(f"{title} - Average Efficiency with Std Deviation", fontsize=18)
+
     ax2.grid(True)
     ax2.invert_xaxis()
 
@@ -1319,7 +1301,7 @@ def plot_efficiency_comparison_multi(
         ax2.set_xlim(xlim)
 
     if plotted_right:
-        ax2.legend()
+        ax2.legend(fontsize=13)
 
     fig_right.tight_layout()
 
