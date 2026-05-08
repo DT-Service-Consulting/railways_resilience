@@ -969,8 +969,7 @@ def plot_efficiency_comparison_single(
         run_configs (list of dict): Each dict must have keys:
             'fil' (Path or str to CSV file), 'color', 'label'
         title (str): Plot title
-        xlim (tuple, optional): (min_x, max_x) range for zoom (percent remaining).
-                                Tuple order does not matter; output is always descending.
+        xlim (tuple, optional): (min_x, max_x) range for zoom.
         save_path (Path or str, optional): If provided, saves the figure.
 
     Returns:
@@ -978,11 +977,32 @@ def plot_efficiency_comparison_single(
             areas_above_full (dict): area above each full curve
             areas_above_plot (dict): area above each curve within plotted x-range
     """
-    plt.figure(figsize=(10, 9))
+
+    from pathlib import Path
+    from matplotlib.lines import Line2D
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    from scipy import integrate
+
+    plt.rcParams.update({
+        "font.size": 14,
+        "axes.labelsize": 22,
+        "axes.titlesize": 24,
+        "xtick.labelsize": 18,
+        "ytick.labelsize": 18,
+        "legend.fontsize": 18,
+    })
+
+    fig, ax = plt.subplots(figsize=(10, 9))
+
     areas_above_full = {}
     areas_above_plot = {}
+    all_x_values = []
+    legend_handles = []
 
-    filename0 = Path(run_configs[0]['fil']).name
+    filename0 = Path(run_configs[0]["fil"]).name
+
     if "_nodes" in filename0:
         keyword = "_nodes"
     elif "_edges" in filename0:
@@ -991,34 +1011,47 @@ def plot_efficiency_comparison_single(
         raise ValueError("Filenames must contain either '_nodes' or '_edges'")
 
     for cfg in run_configs:
-        df = pd.read_csv(cfg['fil'])
-        efficiencies = df['normalized_efficiency'].tolist()
+        df = pd.read_csv(cfg["fil"])
+        efficiencies = df["normalized_efficiency"].tolist()
 
         if efficiencies[0] == 1.0:
             efficiencies = efficiencies[1:]
+
         efficiencies = [1.0] + efficiencies
 
-        filename = Path(cfg['fil']).name
+        filename = Path(cfg["fil"]).name
+
         if keyword not in filename:
-            raise ValueError(f"Inconsistent file naming: expected {keyword} in {filename}")
-        num_str = filename.split(keyword)[-1].replace(".csv", "")
-        total_count = int(num_str)
+            raise ValueError(
+                f"Inconsistent file naming: expected {keyword} in {filename}"
+            )
+
+        total_count = int(filename.split(keyword)[-1].replace(".csv", ""))
 
         num_removed = list(range(len(efficiencies)))
-        percent_remaining = [100 * (total_count - n) / total_count for n in num_removed]
+
+        percent_remaining = [
+            100 * (total_count - n) / total_count
+            for n in num_removed
+        ]
+
+        all_x_values.extend(percent_remaining)
 
         gap_above = [1 - x for x in efficiencies]
 
-        # Area above curve for the full 0-100% graph
-        area_full = integrate.trapezoid(gap_above, dx=100 / total_count)
-        areas_above_full[cfg['label']] = area_full
+        area_full = integrate.trapezoid(
+            gap_above,
+            dx=100 / total_count
+        )
 
-        # Area above curve for the plotted region only
+        areas_above_full[cfg["label"]] = area_full
+
         if xlim is not None:
             xmin, xmax = min(xlim), max(xlim)
 
             zoom_x = []
             zoom_gap = []
+
             for x, g in zip(percent_remaining, gap_above):
                 if xmin <= x <= xmax:
                     zoom_x.append(x)
@@ -1031,51 +1064,104 @@ def plot_efficiency_comparison_single(
         else:
             area_plot = area_full
 
-        areas_above_plot[cfg['label']] = area_plot
+        areas_above_plot[cfg["label"]] = area_plot
 
-        plt.plot(
+        marker_style = "o"
+
+        if cfg["label"].lower() == "netherlands":
+            marker_style = "^"
+
+        ax.plot(
             percent_remaining,
             efficiencies,
-            color=cfg['color'],
-            label=cfg['label']
+            color=cfg["color"],
+            linewidth=2.5,
+            label=cfg["label"]
         )
 
-        plt.scatter(
+        ax.scatter(
             percent_remaining,
             efficiencies,
-            color=cfg['color'],
-            s=15,
-            alpha=0.7
+            color=cfg["color"],
+            marker=marker_style,
+            s=70,
+            alpha=0.9
         )
 
-        plt.fill_between(
+        ax.fill_between(
             percent_remaining,
             efficiencies,
             1.0,
-            color=cfg['color'],
+            color=cfg["color"],
             alpha=0.3
         )
 
-    if xlim:
-        plt.xlim(xlim)
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                color=cfg["color"],
+                marker=marker_style,
+                linewidth=2.5,
+                markersize=10,
+                label=cfg["label"]
+            )
+        )
 
-    if plt.gca().get_xlim()[0] < plt.gca().get_xlim()[1]:
-        plt.gca().invert_xaxis()
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    else:
+        ax.set_xlim(max(all_x_values), min(all_x_values))
 
-    plt.ylim(-0.02, 1.02)
-    plt.yticks(np.linspace(0, 1, 6))
+    if ax.get_xlim()[0] < ax.get_xlim()[1]:
+        ax.invert_xaxis()
 
-    plt.xlabel(f"Percentage of {keyword.strip('_').capitalize()} Remaining")
-    plt.ylabel("Normalized Efficiency")
-    plt.title(title)
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
+    ax.set_ylim(-0.02, 1.02)
+    ax.set_yticks(np.linspace(0, 1, 6))
+
+    ax.set_xlabel(
+        f"Percentage of {keyword.strip('_').capitalize()} Remaining",
+        fontsize=22,
+        labelpad=14
+    )
+
+    ax.set_ylabel(
+        "Normalized Efficiency",
+        fontsize=22,
+        labelpad=14
+    )
+
+    if title:
+        ax.set_title(
+            title,
+            fontsize=24,
+            pad=18
+        )
+
+    ax.grid(True, alpha=0.3)
+
+    ax.legend(
+        handles=legend_handles,
+        fontsize=18,
+        frameon=True
+    )
+
+    plt.subplots_adjust(
+        left=0.12,
+        right=1.0,
+        bottom=0.12,
+        top=0.92
+    )
 
     if save_path is not None:
         save_path = Path(save_path)
         save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
+        plt.savefig(
+            save_path,
+            dpi=300,
+            bbox_inches="tight"
+        )
 
     plt.show()
 
@@ -1808,13 +1894,6 @@ def plot_inset_only(
     - increased spacing
     - publication-friendly sizing
     """
-
-    from pathlib import Path
-    import ast
-    import textwrap
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import pandas as pd
 
     filename0 = Path(run_configs[0]["fil"]).name
 
