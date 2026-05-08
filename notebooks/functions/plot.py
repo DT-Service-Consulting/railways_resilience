@@ -978,7 +978,7 @@ def plot_efficiency_comparison_single(
             areas_above_full (dict): area above each full curve
             areas_above_plot (dict): area above each curve within plotted x-range
     """
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 9))
     areas_above_full = {}
     areas_above_plot = {}
 
@@ -1102,13 +1102,6 @@ def plot_efficiency_comparison_multi(
     """
     Same as before, but with improved font sizes for readability and publication.
     """
-
-    import matplotlib.pyplot as plt
-    from scipy import integrate
-    from pathlib import Path
-    import numpy as np
-    import pandas as pd
-    from matplotlib.lines import Line2D
 
     # --- Global font settings ---
     plt.rcParams.update({
@@ -1495,9 +1488,7 @@ def plot_efficiency_with_node_labels_overlay(
     Overlay two efficiency–node-removal plots using twin x-axes
     with improved font sizes for publication-quality visuals.
     """
-
-    import matplotlib.pyplot as plt
-    from scipy import integrate
+   
 
     # --- Extract data ---
     eff1 = df1["normalized_efficiency"].tolist()
@@ -1797,5 +1788,306 @@ def plot_efficiency_comparison_with_named_inset(
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    plt.show()
+
+def plot_inset_only(
+    run_configs,
+    inset_graphs,
+    inset_n=5,
+    title=None,
+    save_path=None,
+    wrap_width=10,
+    figsize=(14, 8),
+    show_xaxis_names=True,
+):
+    """
+    Standalone inset-style comparison plot with:
+    - no rotated labels
+    - wrapped labels
+    - increased spacing
+    - publication-friendly sizing
+    """
+
+    from pathlib import Path
+    import ast
+    import textwrap
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+
+    filename0 = Path(run_configs[0]["fil"]).name
+
+    if "_nodes" in filename0:
+        removal_kind = "node"
+    elif "_edges" in filename0:
+        removal_kind = "edge"
+    else:
+        raise ValueError("Could not infer node/edge removal type.")
+
+    def parse_node_id(val):
+        if pd.isna(val) or val == "":
+            return None
+
+        try:
+            return int(float(val))
+        except Exception:
+            return None
+
+    def parse_edge(val):
+        if pd.isna(val) or val == "":
+            return None
+
+        try:
+            parsed = ast.literal_eval(str(val))
+
+            if isinstance(parsed, tuple) and len(parsed) == 2:
+                return int(parsed[0]), int(parsed[1])
+
+        except Exception:
+            pass
+
+        return None
+
+    def node_name_lookup(graph, node_id):
+        if node_id is not None and node_id in graph.nodes:
+            return graph.nodes[node_id].get("name", str(node_id))
+
+        return str(node_id)
+
+    def edge_name_lookup(graph, edge_tuple):
+        if edge_tuple is None:
+            return ""
+
+        u, v = edge_tuple
+
+        u_name = node_name_lookup(graph, u)
+        v_name = node_name_lookup(graph, v)
+
+        if graph.has_edge(u, v):
+            edge_data = graph.get_edge_data(u, v)
+
+            if isinstance(edge_data, dict):
+                edge_name = edge_data.get("name")
+
+                if edge_name:
+                    return str(edge_name)
+
+        return f"{u_name} - {v_name}"
+
+    def format_label(name, max_chars=10):
+
+        if not name:
+            return ""
+
+        name = str(name).strip()
+
+        if name.lower() == "full graph":
+            return "Full\nGraph"
+
+        name = name.replace(" - ", "\n-\n")
+
+        return textwrap.fill(
+            name,
+            width=max_chars,
+            break_long_words=False,
+            break_on_hyphens=True,
+        )
+
+    def get_removed_labels(df, graph, kind, n):
+
+        raw_vals = df["removed_node"].tolist()[: n + 1]
+
+        if kind == "node":
+
+            parsed = [parse_node_id(x) for x in raw_vals]
+
+            labels = ["Full Graph"] + [
+                node_name_lookup(graph, x)
+                for x in parsed[1:]
+            ]
+
+        else:
+
+            parsed = [parse_edge(x) for x in raw_vals]
+
+            labels = ["Full Graph"] + [
+                edge_name_lookup(graph, x)
+                for x in parsed[1:]
+            ]
+
+        return [
+            format_label(x, max_chars=wrap_width)
+            for x in labels
+        ]
+
+    dfs = [pd.read_csv(cfg["fil"]) for cfg in run_configs]
+
+    df1, df2 = dfs
+    g1, g2 = inset_graphs
+
+    eff1 = df1["normalized_efficiency"].tolist()[: inset_n + 1]
+    eff2 = df2["normalized_efficiency"].tolist()[: inset_n + 1]
+
+    labels1 = get_removed_labels(
+        df1,
+        g1,
+        removal_kind,
+        inset_n
+    )
+
+    labels2 = get_removed_labels(
+        df2,
+        g2,
+        removal_kind,
+        inset_n
+    )
+
+    spacing = 1.6
+
+    x1 = np.arange(len(eff1)) * spacing
+    x2 = np.arange(len(eff2)) * spacing
+
+    plt.rcParams.update({
+        "font.size": 14,
+        "axes.labelsize": 22,
+        "axes.titlesize": 24,
+        "xtick.labelsize": 18,
+        "ytick.labelsize": 18,
+        "legend.fontsize": 18,
+    })
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax_top = ax.twiny()
+
+    ax.set_ylim(0.0, 1.0)
+    ax_top.set_ylim(0.0, 1.0)
+
+    ax.plot(
+        x1,
+        eff1,
+        color=run_configs[0]["color"],
+        marker="o",
+        linewidth=2.5,
+        markersize=7,
+        label=run_configs[0]["label"],
+    )
+
+    ax_top.plot(
+        x2,
+        eff2,
+        color=run_configs[1]["color"],
+        marker="^",
+        linewidth=2.5,
+        markersize=7,
+        label=run_configs[1]["label"],
+    )
+
+    ax.set_xticks(x1)
+
+    ax.set_xticklabels(
+        labels1,
+        rotation=0,
+        ha="center",
+        fontsize=18,
+    )
+
+    ax_top.set_xticks(x2)
+
+    ax_top.set_xticklabels(
+        labels2,
+        rotation=0,
+        ha="center",
+        fontsize=18,
+    )
+
+    if show_xaxis_names:
+
+        if removal_kind == "node":
+
+            ax.set_xlabel(
+                "Removed Nodes (Belgium)",
+                fontsize=22,
+                labelpad=20
+            )
+
+            ax_top.set_xlabel(
+                "Removed Nodes (Netherlands)",
+                fontsize=22,
+                labelpad=20
+            )
+
+        else:
+
+            ax.set_xlabel(
+                "Removed Edges (Belgium)",
+                fontsize=22,
+                labelpad=20
+            )
+
+            ax_top.set_xlabel(
+                "Removed Edges (Netherlands)",
+                fontsize=22,
+                labelpad=20
+            )
+
+    ax.set_ylabel(
+        "Normalized Efficiency",
+        fontsize=22,
+        labelpad=16
+    )
+
+    if title is not None:
+        ax.set_title(
+            title,
+            fontsize=26,
+            pad=22
+        )
+
+    ax.tick_params(
+        axis="x",
+        pad=18
+    )
+
+    ax_top.tick_params(
+        axis="x",
+        pad=18
+    )
+
+    ax.tick_params(
+        axis="y",
+        labelsize=18
+    )
+
+    ax.grid(
+        True,
+        alpha=0.3
+    )
+
+    lines1, labels_1 = ax.get_legend_handles_labels()
+    lines2, labels_2 = ax_top.get_legend_handles_labels()
+
+    ax.legend(
+        lines1 + lines2,
+        labels_1 + labels_2,
+        loc="lower left",
+        fontsize=18,
+        frameon=True,
+    )
+
+    plt.subplots_adjust(
+        top=0.78,
+        bottom=0.32,
+        left=0.10,
+        right=0.97
+    )
+
+    if save_path:
+        plt.savefig(
+            save_path,
+            dpi=300,
+            bbox_inches="tight"
+        )
 
     plt.show()
