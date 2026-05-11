@@ -1586,6 +1586,8 @@ def plot_efficiency_with_node_labels_from_df(df, title="Network Efficiency over 
 
     return area_above
 
+import textwrap
+
 def plot_efficiency_with_node_labels_overlay(
     df1,
     df2,
@@ -1593,16 +1595,28 @@ def plot_efficiency_with_node_labels_overlay(
     label2="Run 2",
     color1="black",
     color2="orange",
+    marker1="o",
+    marker2="^",
     title=None,
     save_path=None
 ):
     """
     Overlay two efficiency–node-removal plots using twin x-axes
-    with improved font sizes for publication-quality visuals.
+    with publication-quality visuals.
     """
-   
 
-    # --- Extract data ---
+    # =========================
+    # Helper for multiline labels
+    # =========================
+    def wrap_labels(labels, width=12):
+        wrapped = []
+        for label in labels:
+            wrapped.append("\n".join(textwrap.wrap(label, width=width)))
+        return wrapped
+
+    # =========================
+    # Extract data
+    # =========================
     eff1 = df1["normalized_efficiency"].tolist()
     nodes1 = df1["removed_node_names"].tolist()
 
@@ -1624,62 +1638,177 @@ def plot_efficiency_with_node_labels_overlay(
     labels1 = ["Full Graph"] + nodes1[1:]
     labels2 = ["Full Graph"] + nodes2[1:]
 
-    # --- Global font settings (clean + consistent) ---
+    # Wrap labels into multiple lines
+    labels1 = wrap_labels(labels1, width=12)
+    labels2 = wrap_labels(labels2, width=12)
+
+    # =========================
+    # Publication-quality fonts
+    # =========================
     plt.rcParams.update({
-        "font.size": 12,
-        "axes.titlesize": 18,
-        "axes.labelsize": 15,
-        "xtick.labelsize": 12,
-        "ytick.labelsize": 12,
-        "legend.fontsize": 13
+        "font.size": 20,
+        "axes.titlesize": 26,
+        "axes.labelsize": 22,
+        "xtick.labelsize": 16,
+        "ytick.labelsize": 18,
+        "legend.fontsize": 20
     })
 
-    # --- Plot ---
-    fig, ax1 = plt.subplots(figsize=(14, 6))
+    # =========================
+    # Plot
+    # =========================
+    fig, ax1 = plt.subplots(figsize=(18, 9))
     ax2 = ax1.twiny()
 
     ax1.set_ylim(0, 1)
 
-    ax1.plot(x1, eff1, color=color1, marker="o", label=label1)
-    ax1.fill_between(x1, eff1, 1.0, color=color1, alpha=0.25)
+    # Belgium
+    ax1.plot(
+        x1,
+        eff1,
+        color=color1,
+        marker=marker1,
+        linewidth=2.8,
+        markersize=7,
+        label=label1
+    )
 
-    ax2.plot(x2, eff2, color=color2, marker="o", label=label2)
-    ax2.fill_between(x2, eff2, 1.0, color=color2, alpha=0.25)
+    ax1.fill_between(
+        x1,
+        eff1,
+        1.0,
+        color=color1,
+        alpha=0.25
+    )
 
-    # Bottom x axis (run 1)
+    # Netherlands
+    ax2.plot(
+        x2,
+        eff2,
+        color=color2,
+        marker=marker2,
+        linewidth=2.8,
+        markersize=8,
+        label=label2
+    )
+
+    ax2.fill_between(
+        x2,
+        eff2,
+        1.0,
+        color=color2,
+        alpha=0.25
+    )
+
+    # =========================
+    # Bottom x-axis (Belgium)
+    # =========================
     ax1.set_xticks(x1)
-    ax1.set_xticklabels(labels1, rotation=45, ha="right")
-    ax1.set_xlabel(f"Removed Nodes ({label1})")
 
-    # Top x axis (run 2)
+    ax1.set_xticklabels(
+        labels1,
+        rotation=0,
+        ha="center",
+        linespacing=1.2
+    )
+
+    ax1.set_xlabel(
+        f"Removed Nodes ({label1})",
+        fontsize=22,
+        labelpad=4
+    )
+
+    # =========================
+    # Top x-axis (Netherlands)
+    # =========================
     ax2.set_xticks(x2)
-    ax2.set_xticklabels(labels2, rotation=45, ha="left")
-    ax2.set_xlabel(f"Removed Nodes ({label2})")
 
-    # Y axis
-    ax1.set_ylabel("Normalized Efficiency")
+    ax2.set_xticklabels(
+        labels2,
+        rotation=0,
+        ha="center",
+        linespacing=1.2
+    )
 
+    ax2.set_xlabel(
+        f"Removed Nodes ({label2})",
+        fontsize=22,
+        labelpad=20   # extra spacing from labels
+    )
+
+    # =========================
+    # Y-axis
+    # =========================
+    ax1.set_ylabel(
+        "Normalized Efficiency",
+        fontsize=22
+    )
+
+    # =========================
+    # Tick spacing
+    # =========================
+    ax1.tick_params(
+        axis='x',
+        labelsize=16,
+        pad=10
+    )
+
+    ax2.tick_params(
+        axis='x',
+        labelsize=16,
+        pad=10
+    )
+
+    ax1.tick_params(
+        axis='y',
+        labelsize=18
+    )
+
+    # =========================
     # Title
+    # =========================
     if title:
-        ax1.set_title(title)
+        ax1.set_title(title, fontsize=26)
 
+    # =========================
     # Grid
-    ax1.grid(True)
+    # =========================
+    ax1.grid(True, alpha=0.4)
 
+    # =========================
     # Legend
+    # =========================
     lines1, labels1_ = ax1.get_legend_handles_labels()
     lines2, labels2_ = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1_ + labels2_, loc="best")
 
-    plt.tight_layout()
+    ax1.legend(
+        lines1 + lines2,
+        labels1_ + labels2_,
+        loc="best",
+        fontsize=20
+    )
 
-    # --- Save ---
+    # More room for top/bottom labels
+    plt.subplots_adjust(
+        top=0.82,
+        bottom=0.25
+    )
+
+    # =========================
+    # Save
+    # =========================
     if save_path is not None:
-        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        plt.savefig(
+            save_path,
+            dpi=300,
+            bbox_inches="tight"
+        )
 
     plt.show()
 
-    # --- Areas ---
+    # =========================
+    # Areas
+    # =========================
     area1 = integrate.trapezoid([1 - x for x in eff1], dx=1)
     area2 = integrate.trapezoid([1 - x for x in eff2], dx=1)
 
