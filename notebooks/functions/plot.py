@@ -978,13 +978,6 @@ def plot_efficiency_comparison_single(
             areas_above_plot (dict): area above each curve within plotted x-range
     """
 
-    from pathlib import Path
-    from matplotlib.lines import Line2D
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import pandas as pd
-    from scipy import integrate
-
     plt.rcParams.update({
         "font.size": 14,
         "axes.labelsize": 22,
@@ -1186,17 +1179,22 @@ def plot_efficiency_comparison_multi(
     show_titles=True
 ):
     """
-    Same as before, but with improved font sizes for readability and publication.
+    Plots individual efficiency curves and mean efficiency curves.
+
+    Updated for publication:
+    - Larger fonts
+    - Thicker lines
+    - Line styles for grayscale readability
+    - Solid line for Belgium, dashed/dotted line for Netherlands via run_configs
     """
 
-    # --- Global font settings ---
     plt.rcParams.update({
-        "font.size": 12,
-        "axes.titlesize": 18,
-        "axes.labelsize": 15,
-        "xtick.labelsize": 12,
-        "ytick.labelsize": 12,
-        "legend.fontsize": 13
+        "font.size": 18,
+        "axes.titlesize": 22,
+        "axes.labelsize": 20,
+        "xtick.labelsize": 18,
+        "ytick.labelsize": 18,
+        "legend.fontsize": 18
     })
 
     def load_curve_from_csv(csv_file):
@@ -1220,6 +1218,7 @@ def plot_efficiency_comparison_multi(
 
         if efficiencies[0] == 1.0:
             efficiencies = efficiencies[1:]
+
         efficiencies = [1.0] + efficiencies
 
         num_removed = list(range(len(efficiencies)))
@@ -1267,8 +1266,9 @@ def plot_efficiency_comparison_multi(
 
     for config in run_configs:
         directory = Path(config["dir"])
-        color = config["color"]
+        color = config.get("color", "black")
         label = config["label"]
+        linestyle = config.get("linestyle", "-")
 
         csv_files = sorted([f for f in directory.iterdir() if f.suffix == ".csv"])
 
@@ -1278,20 +1278,36 @@ def plot_efficiency_comparison_multi(
                 if percent_remaining is None:
                     continue
 
-                ax1.plot(percent_remaining, efficiencies, color=color, alpha=0.8)
+                ax1.plot(
+                    percent_remaining,
+                    efficiencies,
+                    color=color,
+                    linestyle=linestyle,
+                    alpha=0.8,
+                    linewidth=2
+                )
                 plotted_left = True
 
             except Exception:
                 continue
 
-        legend_elements.append(Line2D([0], [0], color=color, lw=2, label=label))
+        legend_elements.append(
+            Line2D(
+                [0],
+                [0],
+                color=color,
+                lw=2.5,
+                linestyle=linestyle,
+                label=label
+            )
+        )
 
-    ax1.set_xlabel("Percentage Remaining", fontsize=15)
-    ax1.set_ylabel("Normalized Efficiency", fontsize=15)
-    ax1.tick_params(axis='both', labelsize=12)
+    ax1.set_xlabel("Percentage Remaining", fontsize=20)
+    ax1.set_ylabel("Normalized Efficiency", fontsize=20)
+    ax1.tick_params(axis="both", labelsize=18)
 
     if show_titles:
-        ax1.set_title(f"{title} - Individual Efficiency Curves", fontsize=18)
+        ax1.set_title(f"{title} - Individual Efficiency Curves", fontsize=22)
 
     ax1.grid(True)
     ax1.invert_xaxis()
@@ -1300,25 +1316,26 @@ def plot_efficiency_comparison_multi(
         ax1.set_xlim(xlim)
 
     if plotted_left:
-        ax1.legend(handles=legend_elements, fontsize=13)
+        ax1.legend(handles=legend_elements, fontsize=18)
 
     fig_left.tight_layout()
 
     # =========================
     # RIGHT FIGURE
     # =========================
-    fig_right, ax2 = plt.subplots(figsize=(8, 6))
+    fig_right, ax2 = plt.subplots(figsize=(7, 5))
     plotted_right = False
 
     for config in run_configs:
         directory = Path(config["dir"])
-        color = config["color"]
+        color = config.get("color", "black")
         label = config["label"]
+        linestyle = config.get("linestyle", "-")
 
         csv_files = sorted([f for f in directory.iterdir() if f.suffix == ".csv"])
+
         all_efficiencies = []
         all_percent_remaining = []
-
         area_full_runs = []
         area_plot_runs = []
 
@@ -1336,6 +1353,7 @@ def plot_efficiency_comparison_multi(
                     efficiencies,
                     xlim=xlim
                 )
+
                 area_full_runs.append(area_full)
                 area_plot_runs.append(area_plot)
 
@@ -1355,23 +1373,31 @@ def plot_efficiency_comparison_multi(
         mean_eff = eff_matrix.mean(axis=0)
         std_eff = eff_matrix.std(axis=0)
 
-        ax2.plot(pr, mean_eff, color=color, label=label)
+        ax2.plot(
+            pr,
+            mean_eff,
+            color=color,
+            linestyle=linestyle,
+            linewidth=3,
+            label=label
+        )
+
         ax2.fill_between(
             pr,
             mean_eff - std_eff,
             mean_eff + std_eff,
             color=color,
-            alpha=0.25
+            alpha=0.18
         )
 
         plotted_right = True
 
-    ax2.set_xlabel("Percentage Remaining", fontsize=15)
-    ax2.set_ylabel("Normalized Efficiency", fontsize=15)
-    ax2.tick_params(axis='both', labelsize=12)
+    ax2.set_xlabel("Percentage Remaining", fontsize=20)
+    ax2.set_ylabel("Normalized Efficiency", fontsize=20)
+    ax2.tick_params(axis="both", labelsize=18)
 
     if show_titles:
-        ax2.set_title(f"{title} - Average Efficiency with Std Deviation", fontsize=18)
+        ax2.set_title(f"{title} - Average Efficiency with Std Deviation", fontsize=22)
 
     ax2.grid(True)
     ax2.invert_xaxis()
@@ -1380,7 +1406,7 @@ def plot_efficiency_comparison_multi(
         ax2.set_xlim(xlim)
 
     if plotted_right:
-        ax2.legend(fontsize=13)
+        ax2.legend(fontsize=18)
 
     fig_right.tight_layout()
 
