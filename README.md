@@ -1,89 +1,231 @@
 # Public Transport Network Graph Modelling using GTFS Data
 
-This repository provides tools for processing [GTFS](https://github.com/DT-Service-Consulting/gtfs_railways/tree/main) (General Transit Feed Specification) data to model public transport networks as graphs. 
+This repository provides tools for processing [GTFS](https://gtfs.org/) (General Transit Feed Specification) data to model public transport railway networks as graphs using **NetworkX**.
 
-It includes notebooks for parsing, cleaning, and analyzing GTFS data, with support for multiple cities. 
-Our code focuses on the Belgian and Dutch railways data. 
+The project focuses on railway systems in:
+- Belgium
+- Ireland
+- Netherlands (For future work)
 
-An example for the Chicago data is also provided.
+The repository includes workflows for:
+- GTFS preprocessing and cleaning
+- Network generation
+- Topological analysis
+- Graph robustness experiments
+- Efficiency and connectivity analysis
+- Visualization of experimental results
 
-The structure should look like this:
-```bash
-project/
-├── INSTALL.md
-├── README.md
-├── config.py
-├── imports.py
-├── notebooks/
-└── ...
+The project also contains optimization experiments for improving the performance of large-scale graph computations.
+
 ---
-```
 
-## Cleaning data
+# 📦 Repository Structure
 
-The cleaning process involves several steps to ensure the GTFS data is suitable for graph modeling. 
-The main steps are described below:
-- notebook 1
-- notebook 2
-- ...
-
-## Optimization
-
-Five different versions of the functions are provided to optimize the cleaning process.
-
-```python
-get_all_GTC
-```
-
-```python
-P_space
-```
-
-## 📁 Project Structure
 ```bash
-├── notebooks/
-│   ├── Belgium Railways.ipynb # Main notebook for working on the Belgian Data
-│   ├── CheckNodes&Routes.ipynb # Notebook to check, visualize and analyze the L-Graph
-│   ├── Chicago.ipynb # Main notebook for working on the Chicago Data
-│   ├── DeleteNodes&Routes.ipynb # Notebook focussing on cleaning the L-Graph by deleting unwanted nodes and routes
-│   ├── MergeRoutes.ipynb # Notebook which merges direct routes with the actual path. 
-│   └── P-Space.ipynb # Notebook to work on the P-Graph being generated from the cleaned L-Graph
-│   └── TopologicalIndicators_Belgium.ipynb # Notebook to work on the topological indicators of the Belgian Railways
-│   └── PTopologicalIndicators_Netherlands.ipynb # Notebook to work on the topological indicators of the Dutch Railways
-│
-├── data/pkl/
-│   ├── belgium_nodesCleaned.pkl # L-Graph after cleaning the nodes
-│   ├── belgium_routesCleaned.pkl # # L-Graph after cleaning the routes after the nodes
-│   ├── belgium_P.pkl # P-Graph
-│   ├── belgium.pkl # Original L-Graph of Belgian Railways
-│   └── chicago.pkl # Original L-Graph of Chicago Metro
-│   └── gtc_data.pkl # Consists of the GTC output
-│   └── nl_merged.pkl # Cleaned L-Graph of Dutch Railways
-|
-├── data/sqlite/
-│   ├── belgium.sqlite 
-│   └── chicago.sqlite
-│
-```
-
-## SQLite Files
-
-Download the SQLite database files required for the notebooks from the following link:
-
-[Download sqlite.zip](https://www.dropbox.com/scl/fi/hd4l1vxb43j10tglrl4x5/sqlite.zip?rlkey=htpb057n5ibygd0p1iyldn42z&st=2xrzsyo5&dl=0)
-
-### Setup Instructions
-
-1. Download the `sqlite.zip` file from the link above.  
-2. Extract the contents of the zip file.  
-3. Move the extracted folder into the `data` directory of your project.  
-
-After extraction, the structure should look like this:
-```bash
-project/
+railways_resilience/
 ├── data/
-│   ├── pkl/
-│   └── sqlite/
-│       ├── belgium.sqlite
-│       └── chicago.sqlite
+│   ├── belgium/                # Extracted GTFS text files for Belgium
+│   ├── ireland/                # Extracted GTFS text files for Ireland
+│   ├── pkl/                    # Serialized NetworkX graphs and subnetworks
+│   ├── results/                # Experiment results and processed outputs
+│   ├── sqlite/                 # SQLite GTFS databases
+│   └── zip/                    # Original GTFS zip files
+│
+├── graphs/                     # Network and subnetwork visualizations
+│
+├── notebooks/
+│   ├── functions/
+│   │   └── plot.py             # Functions for plotting NetworkX graphs and experiment result plots
+│   │
+│   ├── Marco/
+│   │   ├── illustration.ipynb                  # Generates frames during node/edge removals and creates GIF visualizations
+│   │   ├── Comparision of Curves.ipynb         # Visualization and comparison of experiment result curves
+│   │   └── fitting_patterns/                   # Curve fitting experiments using Exponential, Logistic, Beta-like and related functions
+│   │
+│   ├── Data Cleaning/
+│   │   ├── GTFS Railways.ipynb                 # Converts GTFS zip files into NetworkX railway graphs and performs preliminary analysis
+│   │   ├── CheckNodes&Routes.ipynb             # Detailed analysis and cleaning of nodes and edges in the railway graph
+│   │   └── OutlierEdgesRemoval.ipynb           # Removes edges with low train frequency from the network
+│   │
+│   └── Data Analysis/
+│       ├── Analyzing Subgraphs.ipynb                   # Analysis of Belgian subnetworks based on topological properties
+│       ├── Changes in Topological Indicators.ipynb     # Tracks changes in topological indicators during experiments
+│       ├── Comparing Optimized Functions.ipynb         # Comparison of optimized implementations of core functions
+│       ├── Efficiency (Batched Subgraphs).ipynb        # Efficiency analysis on batches of subnetworks
+│       ├── Efficiency Of Networks (Full Graphs).ipynb  # Efficiency analysis on complete railway graphs
+│       ├── Efficiency Of Subgraph-150 Nodes.ipynb      # Efficiency experiments on subnetworks of 150 nodes
+│       ├── GTC_Belgium.ipynb                           # Graph Topological Characteristics analysis for Belgium
+│       ├── GTC_Ireland.ipynb                           # Graph Topological Characteristics analysis for Ireland
+│       ├── GTC_Netherlands.ipynb                       # Graph Topological Characteristics analysis for Netherlands
+│       ├── Normalized-to-Actual.ipynb                  # Converts normalized experimental values back to actual values
+│       ├── numConnected.ipynb                          # Tracks the number of connected components during experiments
+│       ├── Results.ipynb                               # Visualization and aggregation of experiment results
+│       ├── TopologicalIndicators_Belgium.ipynb         # Topological indicator analysis for Belgian railways
+│       ├── TopologicalIndicators_Ireland.ipynb         # Topological indicator analysis for Irish railways
+│       └── TopologicalIndicators_Netherlands.ipynb     # Topological indicator analysis for Dutch railways
+│
+├── scripts/                    # Python workflows for executing various removal strategy experiments
+│
+├── utils/                      # Import files for functions from the gtfs_railways package
+│
+├── config.py
+├── INSTALL.md
+├── LICENSE
+├── NOTICE
+└── README.md
+```
 
+---
+
+
+# 🗄️ Dataset Downloads
+
+Some GTFS datasets and SQLite files are not included in the repository due to their size.
+
+Download the required datasets from:
+
+[Download SQLite Files](https://www.dropbox.com/scl/fi/hd4l1vxb43j10tglrl4x5/sqlite.zip?rlkey=htpb057n5ibygd0p1iyldn42z&st=2xrzsyo5&dl=0)
+
+After downloading, place the files inside the `data/` directory following this structure:
+
+```bash
+data/
+├── belgium/
+├── ireland/
+├── pkl/
+├── results/
+├── sqlite/
+└── zip/
+```
+
+Example:
+
+```bash
+data/sqlite/
+├── belgium.sqlite
+├── ireland.sqlite
+└── netherlands.sqlite
+```
+
+```bash
+data/zip/
+├── belgium_gtfs.zip
+├── ireland_gtfs.zip
+└── netherlands_gtfs.zip
+```
+
+---
+
+
+# 🧹 Data Cleaning Workflow
+
+The preprocessing and cleaning pipeline consists of several stages:
+
+1. **GTFS Parsing**
+   - Conversion of GTFS zip files into NetworkX railway graphs.
+
+2. **Node and Route Analysis**
+   - Identification and removal of invalid or unnecessary nodes and edges.
+
+3. **Outlier Edge Removal**
+   - Removal of edges with low train frequency.
+
+4. **Subnetwork Generation**
+   - Creation and analysis of subnetworks for robustness experiments.
+
+5. **Graph Serialization**
+   - Saving processed graphs as `.pkl` files for later analysis.
+
+---
+
+# 📊 Data Analysis and Experiments
+
+The repository contains several notebooks for network analysis and robustness experiments, including:
+
+- Graph Topological Characteristics (GTC)
+- Efficiency analysis on full networks and subnetworks
+- Connected component analysis
+- Topological indicator tracking during node removals
+- Normalized-to-actual value conversions
+- Performance optimization benchmarking
+- Experimental result visualization
+
+Additional notebooks are provided for:
+- Curve fitting of degradation patterns
+- Comparative visualization of different removal strategies
+- Animated illustrations of node/edge removal experiments
+
+---
+
+# ⚡ Optimization
+
+Multiple optimized implementations of the core functions are included to improve performance for large railway graphs and repeated experiment runs.
+
+Core functions include:
+
+```python
+get_all_GTC()
+```
+
+```python
+P_space()
+```
+
+Additional optimization benchmarking can be found in:
+
+```bash
+notebooks/Data Analysis/Comparing Optimized Functions.ipynb
+```
+
+---
+
+# 🗄️ GTFS and SQLite Files
+
+The repository supports GTFS datasets in:
+- ZIP format
+- Extracted TXT format
+- SQLite databases
+
+Place the datasets inside the `data/` directory following the structure shown above.
+
+---
+
+# 📈 Graph Visualizations
+
+The `graphs/` directory contains:
+- Railway network visualizations
+- Cleaned subnetworks
+- Experimental graph states
+- Robustness analysis figures
+
+---
+
+# 🚀 Running Experiments
+
+The `scripts/` directory contains Python workflows for executing different node and edge removal strategies used in the robustness experiments.
+
+The notebooks in `Data Analysis/` can then be used to:
+- Evaluate results
+- Generate plots
+- Compare strategies
+- Analyze topological changes
+
+---
+
+# 📚 Dependencies
+
+Please refer to:
+
+```bash
+INSTALL.md
+```
+
+for installation instructions and required dependencies.
+
+---
+
+# 📝 Notes
+
+- The project primarily uses **NetworkX** for graph modelling and analysis.
+- Experimental outputs and intermediate graphs are stored as `.pkl` files.
+- Large GTFS datasets and generated results are intentionally excluded from version control where necessary.
